@@ -30,6 +30,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -297,10 +300,14 @@ class ChatServiceTest {
     }
 
     @Test
-    void streamChat_moreThanTenConcurrentRequests_shouldQueueAtGlobalSemaphore() {
+    void streamChat_moreThanTenConcurrentRequests_shouldQueueAtGlobalSemaphore() throws Exception {
         when(deterministicRouter.route(any())).thenReturn(Optional.empty());
         AtomicInteger activeStreams = new AtomicInteger(0);
         AtomicInteger maxActiveStreams = new AtomicInteger(0);
+        // Barrier: 10 streams must arrive before any proceeds, ensuring we
+        // observe peak concurrency deterministically (no timing dependency).
+        CountDownLatch tenReached = new CountDownLatch(10);
+        CountDownLatch canProceed = new CountDownLatch(1);
         when(retryCoordinator.withResilience(
                 any(Function.class),
                 any(AiStreamRetryCoordinator.EmptyResponseHandler.class),
@@ -309,8 +316,13 @@ class ChatServiceTest {
                 .thenAnswer(invocation -> Flux.defer(() -> {
                     int inFlight = activeStreams.incrementAndGet();
                     maxActiveStreams.getAndUpdate(currentMax -> Math.max(currentMax, inFlight));
+                    tenReached.countDown();
+                    try {
+                        canProceed.await(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                     return Flux.just("ok")
-                            .delayElements(Duration.ofMillis(200))
                             .doFinally(signal -> activeStreams.decrementAndGet());
                 }));
 
@@ -318,10 +330,16 @@ class ChatServiceTest {
                 .mapToObj(i -> chatService.streamChat("hello-" + i, "conv-" + i, "20b", "alice", "sid-" + i))
                 .toList();
 
-        List<String> chunks = Flux.merge(requests).collectList().block(Duration.ofSeconds(20));
+        CompletableFuture<List<String>> future = Flux.merge(requests).collectList().toFuture();
 
-        assertEquals(12, chunks.size());
+        // Wait until exactly 10 streams are in-flight (semaphore blocks the other 2)
+        assertTrue(tenReached.await(10, TimeUnit.SECONDS), "Expected 10 streams to reach the barrier");
         assertTrue(maxActiveStreams.get() <= 10, "Expected max concurrent model streams <= 10");
+
+        // Release all blocked streams; remaining 2 will acquire permits and complete
+        canProceed.countDown();
+        List<String> chunks = future.get(20, TimeUnit.SECONDS);
+        assertEquals(12, chunks.size());
     }
 
     @Test
