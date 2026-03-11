@@ -7,9 +7,12 @@ import { useChatStore } from '../../stores/chatStore.js'
 import { useConversationStore } from '../../stores/conversationStore.js'
 import { useSystemStore } from '../../stores/systemStore.js'
 
-async function flushPromises(times = 6) {
-  for (let i = 0; i < times; i++) {
-    await Promise.resolve()
+async function flushPromises() {
+  // process.nextTick fires after ALL pending microtasks (including
+  // Response.text() → Blob.text() → ReadableStream async chains).
+  // Unlike Promise.resolve(), it is NOT mocked by vi.useFakeTimers().
+  for (let i = 0; i < 3; i++) {
+    await new Promise(resolve => process.nextTick(resolve))
   }
 }
 
