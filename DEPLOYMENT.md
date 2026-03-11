@@ -1,51 +1,51 @@
 # DEPLOYMENT.md
 
-Server Assistant 部署檢查清單（以目前程式碼行為為準）。
+Server Assistant deployment checklist (based on actual code behavior).
 
-適用情境：Linux 主機上的 Spring Boot 單體部署（前端靜態檔內嵌於 JAR）。
+Applicable scenario: Spring Boot monolith deployment on a Linux host (frontend static files embedded in the JAR).
 
-## 0. 真實設定來源
+## 0. Authoritative Configuration Sources
 
-請以以下檔案與啟動 log 為準，不以舊文件或舊筆記為準：
+Refer to the following files and startup logs as the source of truth — not legacy docs or notes:
 
 - `src/main/resources/application.properties`
 - `src/main/resources/config/*.properties`
-- 啟動 log：`Startup config summary: ...`
+- Startup log: `Startup config summary: ...`
 
-## 1. 啟動前必要條件（會被程式阻擋）
+## 1. Startup Prerequisites (Enforced by Application)
 
-以下為 `StartupEnvironmentValidator` 的實際驗證條件：
+The following are actual validation checks performed by `StartupEnvironmentValidator`:
 
-### 1.1 一定要有
+### 1.1 Always Required
 
-- `GROQ_API_KEY`（或 `spring.ai.openai.api-key`）
-- `APP_ENV` 或 `DEPLOY_ENV`（至少一個，且不可空）
-- 若 datasource 為 PostgreSQL：`POSTGRES_PASSWORD`
+- `GROQ_API_KEY` (or `spring.ai.openai.api-key`)
+- `APP_ENV` or `DEPLOY_ENV` (at least one, must not be empty)
+- If the datasource is PostgreSQL: `POSTGRES_PASSWORD`
 
-### 1.2 條件式必填
+### 1.2 Conditionally Required
 
-- 若環境為非 local 類（非 `local/dev/development/test`）且 datasource 為 PostgreSQL：
-  - `APP_SECURITY_CORS_ALLOWED_ORIGINS`（或 `app.security.cors.allowed-origins`）
-  - `SESSION_SIGNATURE_SECRET`（或 `app.security.session.signature-secret`）
-- 若 `SPRING_PROFILES_ACTIVE` 含 `prod` / `production` 且 datasource 為 PostgreSQL：
+- For non-local environments (not `local/dev/development/test`) with PostgreSQL datasource:
+  - `APP_SECURITY_CORS_ALLOWED_ORIGINS` (or `app.security.cors.allowed-origins`)
+  - `SESSION_SIGNATURE_SECRET` (or `app.security.session.signature-secret`)
+- If `SPRING_PROFILES_ACTIVE` includes `prod` / `production` with PostgreSQL datasource:
   - `DATABASE_URL`
 
-### 1.3 建議（非硬性）
+### 1.3 Recommended (Not Enforced)
 
-- `GROQ_API_KEYS`：多 key 輪替
-- `CREDENTIAL_STORE_KEY`：Base64 編碼的 32-byte AES key（`openssl rand -base64 32`）
+- `GROQ_API_KEYS`: Multiple key rotation
+- `CREDENTIAL_STORE_KEY`: Base64-encoded 32-byte AES key (`openssl rand -base64 32`)
 
-## 2. 主機與系統前置
+## 2. Host & System Prerequisites
 
-- Linux 主機
+- Linux host
 - Java `21+`
 - Maven `3.9+`
-- PostgreSQL 可連線
-- PAM 可用（登入走 Linux PAM）
-  - `libpam.so` 可載入
-  - `/etc/pam.d/sshd` 存在
+- PostgreSQL accessible
+- PAM available (login uses Linux PAM)
+  - `libpam.so` loadable
+  - `/etc/pam.d/sshd` exists
 
-建議先檢查：
+Recommended pre-checks:
 
 ```bash
 uname -a
@@ -55,9 +55,9 @@ ldconfig -p | grep libpam || true
 test -f /etc/pam.d/sshd && echo ok || echo missing
 ```
 
-## 3. 設定檔策略
+## 3. Configuration File Strategy
 
-`application.properties` 會載入：
+`application.properties` loads:
 
 - `classpath:config/command.properties`
 - `classpath:config/security.properties`
@@ -66,14 +66,14 @@ test -f /etc/pam.d/sshd && echo ok || echo missing
 - `optional:file:./.local/config.properties`
 - `optional:file:./.local/secrets.properties`
 
-建議：
+Recommendations:
 
-- 把非機密調整放 `.local/config.properties`
-- 把機密（API keys / secret）放 `.local/secrets.properties` 或環境變數
+- Place non-secret overrides in `.local/config.properties`
+- Place secrets (API keys / secrets) in `.local/secrets.properties` or environment variables
 
-## 4. 建置流程
+## 4. Build Process
 
-### 4.1 前端
+### 4.1 Frontend
 
 ```bash
 cd frontend
@@ -82,19 +82,19 @@ npm run build
 cd ..
 ```
 
-- 輸出目錄由 `frontend/vite.config.js` 設定為：`../src/main/resources/static`
+- Output directory is configured in `frontend/vite.config.js` as: `../src/main/resources/static`
 
-### 4.2 後端
+### 4.2 Backend
 
 ```bash
 ./mvnw clean package
 ```
 
-預期產物：`target/server-assistant-0.0.1-SNAPSHOT.jar`
+Expected artifact: `target/server-assistant-0.0.1-SNAPSHOT.jar`
 
-## 5. 啟動範例
+## 5. Startup Examples
 
-### 5.1 直接啟動
+### 5.1 Direct Startup
 
 ```bash
 APP_ENV=production \
@@ -107,7 +107,7 @@ SESSION_SIGNATURE_SECRET='***' \
 java -jar target/server-assistant-0.0.1-SNAPSHOT.jar
 ```
 
-### 5.2 systemd 範例
+### 5.2 systemd Example
 
 `/etc/systemd/system/server-assistant.service`:
 
@@ -129,7 +129,7 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-啟用：
+Enable the service:
 
 ```bash
 sudo systemctl daemon-reload
@@ -137,17 +137,17 @@ sudo systemctl enable --now server-assistant
 sudo systemctl status server-assistant
 ```
 
-## 6. 反向代理與安全注意
+## 6. Reverse Proxy & Security Notes
 
-- 建議只對外開放 80/443，應用埠（預設 8008）走內網
-- 反向代理後若要信任 `X-Forwarded-For`：
+- Only expose ports 80/443 externally; keep the application port (default 8008) on the internal network
+- To trust `X-Forwarded-For` behind a reverse proxy:
   - `app.security.login.trust-forward-headers=true`
   - `app.security.login.trusted-proxy-ips=<proxy ip list>`
-- `app.security.cors.allowed-origins` 請填實際網域，不要萬用字元
+- Set `app.security.cors.allowed-origins` to actual domains — do not use wildcards
 
-## 7. 上線前 Smoke Test
+## 7. Pre-Launch Smoke Test
 
-### 7.1 基本可用性
+### 7.1 Basic Availability
 
 ```bash
 curl -i http://127.0.0.1:8008/api/ping
@@ -162,39 +162,39 @@ curl -i -X OPTIONS "http://127.0.0.1:8008/api/status" \
   -H "Access-Control-Request-Method: GET"
 ```
 
-預期：不應放行未授權來源。
+Expected: Unauthorized origins should not be allowed.
 
-### 7.3 啟動摘要核對
+### 7.3 Startup Summary Verification
 
-確認 log 出現並合理：
+Confirm the following appears in logs and looks correct:
 
 - `Startup config summary: env=..., datasource=...`
 - `Startup config summary: ai.default-model-key=..., ai.model-keys=[...]`
 - `Startup config summary: user-context.store=..., user-context.namespace=...`
 
-## 8. 常見失敗對照
+## 8. Common Failure Reference
 
 - `Missing required primary GROQ API key...`
-  - 未設定 `GROQ_API_KEY`
+  - `GROQ_API_KEY` is not set
 - `Startup blocked: APP_ENV or DEPLOY_ENV must be set and non-empty.`
-  - 缺少部署環境標記
+  - Missing deployment environment identifier
 - `Startup blocked: POSTGRES_PASSWORD ... must be set and non-empty.`
-  - datasource 為 PostgreSQL 但沒給密碼
+  - Datasource is PostgreSQL but password is not provided
 - `Startup blocked in production: DATABASE_URL must be set and non-empty.`
-  - `prod/production` profile 下沒設 `DATABASE_URL`
+  - `DATABASE_URL` not set under `prod/production` profile
 - `Startup blocked in non-local environment with PostgreSQL datasource: app.security.cors.allowed-origins ...`
-  - 非 local + PostgreSQL 缺 CORS 白名單
+  - Non-local + PostgreSQL missing CORS whitelist
 - `... SESSION_SIGNATURE_SECRET ... must be set and non-empty.`
-  - 非 local + PostgreSQL 缺 session 簽章 secret
+  - Non-local + PostgreSQL missing session signature secret
 - `CREDENTIAL_STORE_KEY must be 32 bytes ...`
-  - key 格式錯誤，請重新產生 Base64 32-byte key
+  - Key format is incorrect — regenerate with a Base64 32-byte key
 
-## 9. Redis（選用）
+## 9. Redis (Optional)
 
-若要跨 instance 共享 UserContext：
+To share UserContext across instances:
 
-- 設定 `app.user-context.store=redis`
-- 設定 Redis 連線（`spring.data.redis.*`）
-- 可調整 `app.user-context.redis.namespace`
+- Set `app.user-context.store=redis`
+- Configure Redis connection (`spring.data.redis.*`)
+- Optionally adjust `app.user-context.redis.namespace`
 
-未啟用時預設 `memory`，重啟或多 instance 不保證上下文一致。
+When not enabled, defaults to `memory` — context consistency is not guaranteed across restarts or multiple instances.

@@ -1,69 +1,69 @@
 # Server Assistant
 
-AI 驅動的 Linux 伺服器管理助手（Spring Boot + Vue）。
-提供對話式操作、決定式斜線指令、`!` 直接指令執行、系統監控與管理員儀表板。
+AI-powered Linux server management assistant (Spring Boot + Vue).
+Provides conversational operations, deterministic slash commands, `!` direct command execution, system monitoring, and an admin dashboard.
 
-## 目前版本與技術棧
+## Current Version & Tech Stack
 
-- 後端：Spring Boot `3.4.1`、Java `21`、Spring AI `1.1.0`
-- 前端：Vue `3.5.x`、Pinia `3.x`、Tailwind CSS `4.x`、Vite（Rolldown）
-- 資料庫：PostgreSQL（Flyway migration）
-- AI：Groq（OpenAI-compatible API）
-- 認證：Linux PAM（`libpam4j`）
+- Backend: Spring Boot `3.4.1`, Java `21`, Spring AI `1.1.0`
+- Frontend: Vue `3.5.x`, Pinia `3.x`, Tailwind CSS `4.x`, Vite (Rolldown)
+- Database: PostgreSQL (Flyway migrations)
+- AI: Groq (OpenAI-compatible API)
+- Authentication: Linux PAM (`libpam4j`)
 
-## 主要功能
+## Key Features
 
-- 對話式 AI 操作（SSE 串流回覆）
-- 決定式路由（不經 AI）
-  - slash 指令：`/status`、`/docker`、`/gpu`、`/port`、`/top ...` 等
-  - `!` 前綴：直接執行 Linux 指令（仍會經過安全檢查）
-- 高風險操作確認流程（例如 `rm`、`mv`、`apt`、`mount`）
-- 系統監控（CPU / 記憶體 / 磁碟 / GPU / Port / Process）
-- Docker 快照資訊
-- 管理員功能
-  - 使用者操作（新增使用者、SSH key）
-  - 聊天記錄 / 指令審計查詢與清理
-  - AI 模型清單管理（`/api/admin/models`）
-- UserContext 後端可切換 `memory` 或 `redis`
+- Conversational AI operations (SSE streaming responses)
+- Deterministic routing (bypasses AI)
+  - Slash commands: `/status`, `/docker`, `/gpu`, `/port`, `/top ...`, etc.
+  - `!` prefix: Direct Linux command execution (still goes through security checks)
+- High-risk operation confirmation flow (e.g., `rm`, `mv`, `apt`, `mount`)
+- System monitoring (CPU / Memory / Disk / GPU / Ports / Processes)
+- Docker snapshot information
+- Admin features
+  - User operations (add users, SSH keys)
+  - Chat history / command audit queries and cleanup
+  - AI model list management (`/api/admin/models`)
+- UserContext backend switchable between `memory` and `redis`
 
-## 啟動前需求
+## Prerequisites
 
-- Linux 主機（PAM 認證依賴 Linux）
+- Linux host (PAM authentication requires Linux)
 - Java `21+`
-- Maven `3.9+`（由 `maven-enforcer-plugin` 驗證）
-- Node.js `18+` + npm（前端建置/開發）
-- PostgreSQL（預設 datasource）
+- Maven `3.9+` (enforced by `maven-enforcer-plugin`)
+- Node.js `18+` + npm (frontend build/development)
+- PostgreSQL (default datasource)
 - Groq API key
 
-## 快速開始（本機）
+## Quick Start (Local)
 
-### 1. 設定必要環境變數
+### 1. Set Required Environment Variables
 
 ```bash
 export APP_ENV=local
 export GROQ_API_KEY="<your-groq-key>"
 export POSTGRES_PASSWORD="<db-password>"
 
-# 可選：多把 key 輪替
+# Optional: multiple key rotation
 export GROQ_API_KEYS="<key-2>,<key-3>"
 
-# 可選：本機通常不需要，若要明確指定可加
+# Optional: usually not needed locally, but can be set explicitly
 export APP_SECURITY_CORS_ALLOWED_ORIGINS="http://localhost:5173"
 ```
 
-說明：
+Notes:
 
-- `APP_ENV` 或 `DEPLOY_ENV` 至少要有一個。
-- 若 datasource 為 PostgreSQL（預設是），`POSTGRES_PASSWORD` 必填。
+- At least one of `APP_ENV` or `DEPLOY_ENV` must be set.
+- If the datasource is PostgreSQL (the default), `POSTGRES_PASSWORD` is required.
 
-### 2. 準備資料庫
+### 2. Prepare the Database
 
-預設連線：`jdbc:postgresql://localhost:5432/serverassistant`
-預設使用者：`serverassistant`
+Default connection: `jdbc:postgresql://localhost:5432/serverassistant`
+Default user: `serverassistant`
 
-請先建立對應 DB / user，或改 `DATABASE_URL` 與 `spring.datasource.username`。
+Create the corresponding database and user first, or override `DATABASE_URL` and `spring.datasource.username`.
 
-### 3. 建置前端靜態檔（給 Spring Boot 打包）
+### 3. Build Frontend Static Files (for Spring Boot packaging)
 
 ```bash
 cd frontend
@@ -72,18 +72,18 @@ npm run build
 cd ..
 ```
 
-Vite 產物會輸出到：`src/main/resources/static`。
+Vite output goes to: `src/main/resources/static`.
 
-### 4. 啟動後端
+### 4. Start the Backend
 
 ```bash
 ./mvnw clean package -DskipTests
 java -jar target/server-assistant-0.0.1-SNAPSHOT.jar
 ```
 
-服務預設：`http://localhost:8008`
+Default service URL: `http://localhost:8008`
 
-## 開發模式（前後端分離）
+## Development Mode (Separate Frontend & Backend)
 
 ```bash
 # Terminal 1: backend
@@ -94,25 +94,25 @@ cd frontend
 npm run dev
 ```
 
-- 前端開發站：`http://localhost:5173`
-- `vite.config.js` 已設定 `/api -> http://localhost:8008` 代理。
+- Frontend dev server: `http://localhost:5173`
+- `vite.config.js` is configured to proxy `/api -> http://localhost:8008`.
 
-## 設定來源與優先序
+## Configuration Sources & Priority
 
-`application.properties` 透過 `spring.config.import` 載入：
+`application.properties` loads via `spring.config.import`:
 
 1. `src/main/resources/config/*.properties`
-2. `./.local/config.properties`（optional）
-3. `./.local/secrets.properties`（optional）
+2. `./.local/config.properties` (optional)
+3. `./.local/secrets.properties` (optional)
 
-高到低覆蓋順序（實務上）：
+Override priority (highest to lowest):
 
-- 環境變數 / 啟動參數
+- Environment variables / startup arguments
 - `.local/secrets.properties`
 - `.local/config.properties`
 - `config/*.properties`
 
-以程式實際行為為準的檔案：
+Authoritative configuration files:
 
 - `src/main/resources/application.properties`
 - `src/main/resources/config/ai.properties`
@@ -120,52 +120,52 @@ npm run dev
 - `src/main/resources/config/command.properties`
 - `src/main/resources/config/system.properties`
 
-## 啟動阻擋條件（程式碼實際檢查）
+## Startup Blocking Conditions (Actual Code Checks)
 
-由 `StartupEnvironmentValidator` 驗證：
+Validated by `StartupEnvironmentValidator`:
 
-- 必須有 `APP_ENV` 或 `DEPLOY_ENV`（若兩者同時存在，值需一致）
-- 必須有 `GROQ_API_KEY`（或 `spring.ai.openai.api-key`）
-- 若 datasource 是 PostgreSQL，必須有 `POSTGRES_PASSWORD`
-- 若是「非 local 類環境 + PostgreSQL」，必須同時設定：
+- `APP_ENV` or `DEPLOY_ENV` must be set (if both are present, values must match)
+- `GROQ_API_KEY` (or `spring.ai.openai.api-key`) is required
+- If the datasource is PostgreSQL, `POSTGRES_PASSWORD` is required
+- For non-local environments + PostgreSQL, the following must also be set:
   - `app.security.cors.allowed-origins` / `APP_SECURITY_CORS_ALLOWED_ORIGINS`
   - `app.security.session.signature-secret` / `SESSION_SIGNATURE_SECRET`
-- 若 `spring.profiles.active` 含 `prod`/`production` 且 datasource 為 PostgreSQL，必須設定 `DATABASE_URL`
+- If `spring.profiles.active` includes `prod`/`production` and the datasource is PostgreSQL, `DATABASE_URL` is required
 
-## 斜線指令（目前實作）
+## Slash Commands (Current Implementation)
 
-- 一般：`/help`、`/status`、`/docker`、`/gpu`、`/port`、`/top cpu [N]`、`/top mem [N]`
-- 管理員：`/users`、`/addUser [username]`、`/addSSHKey [username]`、`/mount ...`、`/offload ...`
+- General: `/help`, `/status`, `/docker`, `/gpu`, `/port`, `/top cpu [N]`, `/top mem [N]`
+- Admin: `/users`, `/addUser [username]`, `/addSSHKey [username]`, `/mount ...`, `/offload ...`
 
-## API 概覽
+## API Overview
 
-- 認證：`/api/login`、`/api/logout`、`/api/status`
-- 健康檢查：`/api/ping`
-- AI：`/api/ai/stream`、`/api/ai/models`、`/api/ai/history`、`/api/ai/conversations`
-- 管理員：`/api/admin/**`、`/api/admin/models/**`
-- 系統資訊：`/api/system/info`
+- Auth: `/api/login`, `/api/logout`, `/api/status`
+- Health check: `/api/ping`
+- AI: `/api/ai/stream`, `/api/ai/models`, `/api/ai/history`, `/api/ai/conversations`
+- Admin: `/api/admin/**`, `/api/admin/models/**`
+- System info: `/api/system/info`
 
-## 安全重點
+## Security Highlights
 
 - Session-based auth + Spring Security method security
-- CSRF（Cookie token）
+- CSRF (cookie token)
 - CORS whitelist
-- 指令安全驗證：封鎖危險字元、鏈式執行、shell wrapper、inline interpreter 等
-- 高風險命令確認機制
-- Session 使用簽章（`SESSION_SIGNATURE_SECRET` 建議生產必設）
-- 密碼以記憶體加密暫存（`SecureCredentialStore`）
+- Command security validation: blocks dangerous characters, command chaining, shell wrappers, inline interpreters, etc.
+- High-risk command confirmation mechanism
+- Session signature (`SESSION_SIGNATURE_SECRET` recommended for production)
+- Passwords temporarily stored with in-memory encryption (`SecureCredentialStore`)
 
-## 測試與檢查
+## Testing
 
 ```bash
-# backend 測試
+# Backend tests
 ./mvnw test
 
-# frontend 單元測試
+# Frontend unit tests
 cd frontend && npm run test:unit
 ```
 
-## 相關文件
+## Related Documentation
 
-- 部署清單：[DEPLOYMENT.md](DEPLOYMENT.md)
-- 架構與細節：[CLAUDE.md](CLAUDE.md)
+- Deployment checklist: [DEPLOYMENT.md](DEPLOYMENT.md)
+- Architecture & details: [CLAUDE.md](CLAUDE.md)
