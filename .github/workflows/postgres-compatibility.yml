@@ -1,0 +1,33 @@
+name: postgres-compatibility
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  postgres-schema-repository:
+    name: postgres-schema-repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Verify Docker availability
+        run: docker info
+
+      - name: Run PostgreSQL schema and repository tests
+        run: ./mvnw -B -Dtest=ChatMessageRepositoryPostgresTest -DfailIfNoTests=true test
