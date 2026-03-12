@@ -30,4 +30,4 @@ jobs:
         run: docker info
 
       - name: Run PostgreSQL schema and repository tests
-        run: ./mvnw -B -Dtest=ChatMessageRepositoryPostgresTest -DfailIfNoTests=true test
+        run: ./mvnw -B -Pdocker-tests -Dtest=ChatMessageRepositoryPostgresTest -DfailIfNoTests=true test
