@@ -69,6 +69,12 @@ describe('ChatCommandRequest', () => {
 
     await flushUi();
 
+    // Initially expired commands start collapsed; expand via summary row
+    const summaryRow = view.container.querySelector('.cmd-summary-row');
+    expect(summaryRow).not.toBeNull();
+    summaryRow.click();
+    await flushUi();
+
     const expandedCard = view.container.querySelector('[role="group"]');
     expect(expandedCard).not.toBeNull();
     expect(view.container.textContent).toContain('確認已逾時');
@@ -199,6 +205,12 @@ describe('ChatCommandRequest', () => {
       second: '2-digit',
       hour12: false,
     }).format(new Date(createdAt));
+
+    // Initially expired commands start collapsed; expand via summary row
+    const summaryRow = view.container.querySelector('.cmd-summary-row');
+    expect(summaryRow).not.toBeNull();
+    summaryRow.click();
+    await flushUi();
 
     expect(view.container.querySelector('[role="group"]')).not.toBeNull();
     expect(view.container.textContent).toContain(`逾時時間：${expectedExpiresAt}`);

@@ -304,6 +304,13 @@ const runQuickStartCommand = async (command) => {
   handleComposerSend();
 };
 
+const handleCommandAction = (msg, action) => {
+  if (action === 'resend' && msg?.command?.content) {
+    emit('update:userInput', msg.command.content);
+  }
+  emit('command-action', msg, action);
+};
+
 const fillExamplePrompt = (prompt) => {
   if (!prompt || quickStartDisabled.value) return;
   emit('update:userInput', prompt);
@@ -348,7 +355,7 @@ const startThinkingTimer = () => {
 const typingIndicatorText = computed(() => {
   if (props.toolCallStatus) return props.toolCallStatus;
   if (thinkingElapsedSec.value >= THINKING_STATUS_ESCALATION_SEC) return 'AI 仍在思考，請稍候...';
-  return 'AI 正在思考中...';
+  return 'AI 正在處理中...';
 });
 
 const showRetryBanner = computed(() => props.isRetrying && Boolean(props.statusMessage));
@@ -882,7 +889,7 @@ defineExpose({
               :rendered-html="renderMarkdown(visibleMessagesWithKeys[virtualRow.index].msg.content)"
               :should-collapse="shouldCollapseMessage(visibleMessagesWithKeys[virtualRow.index].msg)"
               :available-models="availableModels"
-              @command-action="(msg, action) => emit('command-action', msg, action)"
+              @command-action="handleCommandAction"
               @edit-message="(idx) => emit('edit-message', idx)"
               @regenerate-message="(idx) => emit('regenerate-message', idx)"
               @toggle-expand="toggleExpand"

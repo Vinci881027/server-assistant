@@ -36,7 +36,7 @@ const isExpired = computed(() => props.status === 'expired' || (isPending.value 
 const isResolved = computed(() => isConfirmed.value || isFailed.value || isCancelled.value || isExpired.value);
 
 const isAlreadyResolved = props.status === 'confirmed' || props.status === 'failed' || props.status === 'cancelled';
-const collapsed = ref(isAlreadyResolved);
+const collapsed = ref(isAlreadyResolved || isInitiallyExpired(props));
 const summaryRef = ref(null);
 const resolvedAtLabel = ref(null);
 const resolvedAtIsCreatedFallback = ref(false);

@@ -277,6 +277,7 @@ onBeforeUnmount(() => {
 
     <!-- Copy Button -->
     <button
+      v-if="!isTouchDevice"
       @click="emit('copy', msg.content, $event)"
       class="mt-2 p-1.5 rounded-lg transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
       style="color: var(--text-tertiary);"

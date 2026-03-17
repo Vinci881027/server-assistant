@@ -644,6 +644,7 @@ export function useChat() {
     if (!msg || isProcessing.value) return
 
     if (msg.length > MAX_MESSAGE_LENGTH) {
+      statusMessage.value = `訊息過長，請縮短後再傳送（上限 ${MAX_MESSAGE_LENGTH} 字元）`
       return
     }
 
