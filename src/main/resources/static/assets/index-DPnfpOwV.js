@@ -1,7 +1,7 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/AdminDashboard-DseJ2ei4.js","assets/vendor-vue-DigYjX59.js","assets/vendor-utils-BU-w9I5u.js","assets/vendor-CmHsBc4_.js","assets/rolldown-runtime-Cj0C9Eap.js","assets/AdminDashboard-D0FfC38Y.css"])))=>i.map(i=>d[i]);
-import { A as resolveDynamicComponent, C as nextTick, D as openBlock, E as onUnmounted, F as ref, I as unref, L as normalizeClass, M as watch, N as withCtx, O as renderList, P as withDirectives, R as normalizeStyle, S as mergeModels, T as onMounted, _ as createElementBlock, a as createApp, b as createVNode, c as vModelSelect, d as withModifiers, f as Fragment, g as createCommentVNode, h as createBlock, i as Transition, j as useModel, k as renderSlot, l as vModelText, m as createBaseVNode, n as defineStore, p as computed, r as storeToRefs, s as vModelDynamic, t as createPinia, u as withKeys, v as createStaticVNode, w as onBeforeUnmount, x as defineAsyncComponent, y as createTextVNode, z as toDisplayString } from "./vendor-vue-DigYjX59.js";
-import { n as axios_default, t as lib_default } from "./vendor-utils-BU-w9I5u.js";
-import { t as purify } from "./vendor-CmHsBc4_.js";
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/AdminDashboard-CpxNEyki.js","assets/vendor-DQFcYRvF.js","assets/rolldown-runtime-Cj0C9Eap.js","assets/vendor-vue-DuDrcgjQ.js","assets/vendor-utils-MwEYep9l.js","assets/AdminDashboard-BiQhSPFo.css"])))=>i.map(i=>d[i]);
+import { A as renderSlot, B as toDisplayString, C as mergeModels, D as onUnmounted, E as onMounted, F as withDirectives, I as ref, L as unref, M as useModel, N as watch, O as openBlock, P as withCtx, R as normalizeClass, S as defineAsyncComponent, T as onBeforeUnmount, _ as createCommentVNode, a as Transition, b as createTextVNode, d as withKeys, f as withModifiers, g as createBlock, h as createBaseVNode, i as storeToRefs, j as resolveDynamicComponent, k as renderList, l as vModelDynamic, m as computed, n as createPinia, o as TransitionGroup, p as Fragment, r as defineStore, s as createApp, t as useVirtualizer, u as vModelText, v as createElementBlock, w as nextTick, x as createVNode, y as createStaticVNode, z as normalizeStyle } from "./vendor-vue-DuDrcgjQ.js";
+import { n as axios_default, t as lib_default } from "./vendor-utils-MwEYep9l.js";
+import { t as purify } from "./vendor-DQFcYRvF.js";
 
 //#region \0vite/modulepreload-polyfill.js
 (function polyfill() {
@@ -35,6 +35,33 @@ import { t as purify } from "./vendor-CmHsBc4_.js";
 })();
 
 //#endregion
+//#region src/config/app.config.js
+var DEFAULT_APP_NAME = "CGV Lab Server Assistant";
+const APP_CONFIG = { name: DEFAULT_APP_NAME };
+const UI_CONFIG = {
+	theme: "dark",
+	sidebarDefaultOpen: true,
+	messageAnimationDuration: 300,
+	scrollBehavior: "smooth",
+	messageWindowSize: 80,
+	messageWindowLoadChunk: 20,
+	markdownMaxRenderLength: 2e4,
+	virtualScrollOverscan: 5,
+	virtualScrollEstimateSize: 120
+};
+const CHAT_CONFIG = {
+	maxMessageLength: 8e3,
+	maxMessagesPerConversation: 20,
+	historyPageSize: 50,
+	streamingEnabled: true,
+	retryAttempts: 3,
+	retryDelay: 1e3
+};
+var DEFAULT_COMMAND_CONFIRM_TIMEOUT_SECONDS = 120;
+const COMMAND_CONFIG = { confirmTimeoutSeconds: DEFAULT_COMMAND_CONFIRM_TIMEOUT_SECONDS };
+const COMMAND_CONFIRM_TIMEOUT_SECONDS = Number.isInteger(COMMAND_CONFIG.confirmTimeoutSeconds) && COMMAND_CONFIG.confirmTimeoutSeconds > 0 ? COMMAND_CONFIG.confirmTimeoutSeconds : DEFAULT_COMMAND_CONFIRM_TIMEOUT_SECONDS;
+
+//#endregion
 //#region src/stores/themeStore.js
 const useThemeStore = defineStore("theme", () => {
 	const theme = ref("dark");
@@ -42,7 +69,7 @@ const useThemeStore = defineStore("theme", () => {
 	function initTheme() {
 		const saved = localStorage.getItem("theme");
 		if (saved === "light" || saved === "dark") theme.value = saved;
-		else if (window.matchMedia("(prefers-color-scheme: light)").matches) theme.value = "light";
+		else theme.value = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 		applyTheme();
 	}
 	function toggleTheme() {
@@ -282,7 +309,7 @@ const useAuthStore = defineStore("auth", () => {
 	* Login with username and password
 	* @param {string} username - Linux system username
 	* @param {string} password - User password
-	* @returns {Promise<{success: boolean, message: string, code?: string, data?: object}>}
+	* @returns {Promise<{success: boolean, message: string, code?: string, data?: object, transportCode?: string}>}
 	*/
 	async function login(username, password) {
 		try {
@@ -301,7 +328,8 @@ const useAuthStore = defineStore("auth", () => {
 				success: false,
 				message: error.message || "Login failed",
 				code: apiCode,
-				data: apiData
+				data: apiData,
+				transportCode: error?.code || null
 			};
 		}
 	}
@@ -358,6 +386,36 @@ const useAuthStore = defineStore("auth", () => {
 });
 
 //#endregion
+//#region src/utils/loginLockout.js
+/**
+* Number of remaining attempts at which to show the near-lockout warning.
+*/
+const LOCKOUT_WARNING_THRESHOLD = 2;
+/**
+* Returns a warning message when the user is close to being locked out.
+*
+* @param {number|string|null|undefined} remainingAttempts
+* @returns {string|null}
+*/
+function formatLockoutWarning(remainingAttempts) {
+	const n = Number(remainingAttempts);
+	if (!Number.isFinite(n) || n <= 0 || n > 2) return null;
+	return `再失敗 ${n} 次將鎖定帳號 15 分鐘`;
+}
+/**
+* Formats a remaining lockout duration in MM:SS for live countdown display.
+*
+* @param {number} seconds
+* @returns {string}
+*/
+function formatLockoutCountdown(seconds) {
+	const s = Math.max(0, Math.floor(Number(seconds)));
+	const m = Math.floor(s / 60);
+	const sec = s % 60;
+	return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+//#endregion
 //#region src/assets/favicon.svg?raw
 var favicon_default = "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"h-8 w-8 text-white\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\">\n  <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01\" />\n</svg>\n\n";
 
@@ -372,8 +430,8 @@ var __plugin_vue_export_helper_default = (sfc, props) => {
 //#endregion
 //#region src/components/Login.vue
 var _hoisted_1$11 = { class: "login-wrapper relative flex min-h-screen items-center justify-center px-6 py-12 overflow-hidden" };
-var _hoisted_2$8 = ["aria-label"];
-var _hoisted_3$8 = {
+var _hoisted_2$9 = ["aria-label"];
+var _hoisted_3$9 = {
 	key: 0,
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-5 w-5",
@@ -382,7 +440,7 @@ var _hoisted_3$8 = {
 	stroke: "currentColor",
 	style: { "color": "var(--accent-warning)" }
 };
-var _hoisted_4$6 = {
+var _hoisted_4$9 = {
 	key: 1,
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-5 w-5",
@@ -391,22 +449,26 @@ var _hoisted_4$6 = {
 	stroke: "currentColor",
 	style: { "color": "var(--accent-primary)" }
 };
-var _hoisted_5$5 = {
+var _hoisted_5$8 = {
 	class: "login-card rounded-2xl p-8 shadow-2xl backdrop-blur-xl border",
 	style: {
 		"background-color": "var(--glass-bg)",
 		"border-color": "var(--glass-border)"
 	}
 };
-var _hoisted_6$5 = { class: "text-center mb-8" };
-var _hoisted_7$5 = {
+var _hoisted_6$7 = { class: "text-center mb-8" };
+var _hoisted_7$6 = {
 	class: "inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg",
 	style: { "background": "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))" }
 };
-var _hoisted_8$5 = ["innerHTML"];
-var _hoisted_9$5 = { class: "relative" };
-var _hoisted_10$5 = { class: "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none" };
-var _hoisted_11$5 = {
+var _hoisted_8$6 = ["innerHTML"];
+var _hoisted_9$6 = {
+	class: "text-2xl font-bold tracking-tight",
+	style: { "color": "var(--text-primary)" }
+};
+var _hoisted_10$6 = { class: "relative" };
+var _hoisted_11$6 = { class: "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none" };
+var _hoisted_12$6 = {
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-5 w-5",
 	fill: "none",
@@ -414,9 +476,9 @@ var _hoisted_11$5 = {
 	stroke: "currentColor",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_12$4 = { class: "relative" };
-var _hoisted_13$4 = { class: "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none" };
-var _hoisted_14$4 = {
+var _hoisted_13$5 = { class: "relative" };
+var _hoisted_14$5 = { class: "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none" };
+var _hoisted_15$5 = {
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-5 w-5",
 	fill: "none",
@@ -424,13 +486,13 @@ var _hoisted_14$4 = {
 	stroke: "currentColor",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_15$4 = ["type"];
-var _hoisted_16$4 = [
+var _hoisted_16$5 = ["type"];
+var _hoisted_17$4 = [
 	"aria-label",
 	"title",
 	"aria-pressed"
 ];
-var _hoisted_17$4 = {
+var _hoisted_18$4 = {
 	key: 0,
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-5 w-5",
@@ -438,7 +500,7 @@ var _hoisted_17$4 = {
 	viewBox: "0 0 24 24",
 	stroke: "currentColor"
 };
-var _hoisted_18$4 = {
+var _hoisted_19$4 = {
 	key: 1,
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-5 w-5",
@@ -446,8 +508,17 @@ var _hoisted_18$4 = {
 	viewBox: "0 0 24 24",
 	stroke: "currentColor"
 };
-var _hoisted_19$4 = ["disabled"];
 var _hoisted_20$4 = {
+	key: 0,
+	class: "rounded-xl px-4 py-2.5 text-sm font-medium text-center",
+	style: {
+		"background-color": "color-mix(in srgb, var(--accent-warning) 15%, transparent)",
+		"color": "var(--accent-warning)",
+		"border": "1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent)"
+	}
+};
+var _hoisted_21$4 = ["disabled"];
+var _hoisted_22$4 = {
 	key: 0,
 	class: "animate-spin -ml-1 mr-3 h-5 w-5 text-white",
 	xmlns: "http://www.w3.org/2000/svg",
@@ -468,18 +539,44 @@ var _sfc_main$11 = {
 		const isError = ref(false);
 		const isMounted = ref(false);
 		const showPassword = ref(false);
+		const lockoutSeconds = ref(0);
+		const remainingAttempts = ref(null);
+		const lockoutIntervalId = ref(null);
+		const LOGIN_ERROR_MESSAGES = {
+			invalidCredentials: "密碼或帳號錯誤",
+			network: "無法連線伺服器，請確認網路"
+		};
+		const isLockedOut = computed(() => lockoutSeconds.value > 0);
+		const displayMessage = computed(() => {
+			if (lockoutSeconds.value > 0) return `帳號已鎖定，請等待 ${formatLockoutCountdown(lockoutSeconds.value)} 後再試`;
+			return message.value;
+		});
+		const lockoutWarning = computed(() => formatLockoutWarning(remainingAttempts.value));
+		function startLockoutCountdown(seconds) {
+			if (lockoutIntervalId.value) clearInterval(lockoutIntervalId.value);
+			lockoutSeconds.value = Math.max(1, Math.ceil(Number(seconds)));
+			remainingAttempts.value = null;
+			lockoutIntervalId.value = setInterval(() => {
+				lockoutSeconds.value--;
+				if (lockoutSeconds.value <= 0) {
+					clearInterval(lockoutIntervalId.value);
+					lockoutIntervalId.value = null;
+					lockoutSeconds.value = 0;
+				}
+			}, 1e3);
+		}
 		onMounted(() => {
 			requestAnimationFrame(() => isMounted.value = true);
 		});
-		const formatLockoutMessage = (retryAfterSeconds) => {
-			const parsedSeconds = Number(retryAfterSeconds);
-			if (!Number.isFinite(parsedSeconds) || parsedSeconds <= 0) return null;
-			return `帳號已鎖定，請 ${Math.max(1, Math.ceil(parsedSeconds / 60))} 分鐘後再試`;
-		};
+		onUnmounted(() => {
+			if (lockoutIntervalId.value) clearInterval(lockoutIntervalId.value);
+		});
 		const handleLogin = async () => {
+			if (isLockedOut.value) return;
 			isLoading.value = true;
 			message.value = "";
 			isError.value = false;
+			remainingAttempts.value = null;
 			try {
 				const result = await authStore.login(username.value, password.value);
 				if (result.success) {
@@ -488,30 +585,38 @@ var _sfc_main$11 = {
 				} else {
 					isError.value = true;
 					if (result.code === "LOGIN_RATE_LIMITED") {
-						const lockoutMessage = formatLockoutMessage(result.data?.retryAfterSeconds);
-						if (lockoutMessage) {
-							message.value = lockoutMessage;
-							return;
-						}
+						startLockoutCountdown(result.data?.retryAfterSeconds || 60);
+						return;
 					}
-					message.value = result.message || result.error?.message || "登入失敗：使用者名稱不存在或密碼錯誤";
+					if (isNetworkLoginFailure(result)) {
+						message.value = LOGIN_ERROR_MESSAGES.network;
+						return;
+					}
+					const remaining = result.data?.remainingAttempts;
+					if (remaining != null && remaining <= 2) remainingAttempts.value = remaining;
+					message.value = LOGIN_ERROR_MESSAGES.invalidCredentials;
 				}
 			} catch (error) {
 				isError.value = true;
-				message.value = "連線錯誤：無法連接到後端伺服器";
+				message.value = LOGIN_ERROR_MESSAGES.network;
 				console.error("Login error:", error);
 			} finally {
 				isLoading.value = false;
 			}
 		};
+		function isNetworkLoginFailure(result) {
+			if ((result?.transportCode || "").toString().toUpperCase() === "ERR_NETWORK") return true;
+			const normalizedMessage = `${result?.message || ""} ${result?.error?.message || ""}`.toLowerCase();
+			return normalizedMessage.includes("network error") || normalizedMessage.includes("failed to fetch") || normalizedMessage.includes("連線錯誤") || normalizedMessage.includes("無法連線");
+		}
 		return (_ctx, _cache) => {
 			return openBlock(), createElementBlock("div", _hoisted_1$11, [
-				_cache[20] || (_cache[20] = createBaseVNode("div", { class: "absolute inset-0 login-bg" }, null, -1)),
-				_cache[21] || (_cache[21] = createBaseVNode("div", {
+				_cache[19] || (_cache[19] = createBaseVNode("div", { class: "absolute inset-0 login-bg" }, null, -1)),
+				_cache[20] || (_cache[20] = createBaseVNode("div", {
 					class: "absolute top-1/4 -left-20 w-72 h-72 rounded-full blur-3xl opacity-20",
 					style: { "background-color": "var(--accent-primary)" }
 				}, null, -1)),
-				_cache[22] || (_cache[22] = createBaseVNode("div", {
+				_cache[21] || (_cache[21] = createBaseVNode("div", {
 					class: "absolute bottom-1/4 -right-20 w-80 h-80 rounded-full blur-3xl opacity-15",
 					style: { "background-color": "var(--accent-secondary)" }
 				}, null, -1)),
@@ -524,28 +629,25 @@ var _sfc_main$11 = {
 					},
 					title: "切換主題",
 					"aria-label": unref(themeStore).isDark ? "切換為淺色主題" : "切換為深色主題"
-				}, [unref(themeStore).isDark ? (openBlock(), createElementBlock("svg", _hoisted_3$8, [..._cache[8] || (_cache[8] = [createBaseVNode("path", {
+				}, [unref(themeStore).isDark ? (openBlock(), createElementBlock("svg", _hoisted_3$9, [..._cache[8] || (_cache[8] = [createBaseVNode("path", {
 					"stroke-linecap": "round",
 					"stroke-linejoin": "round",
 					"stroke-width": "2",
 					d: "M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-				}, null, -1)])])) : (openBlock(), createElementBlock("svg", _hoisted_4$6, [..._cache[9] || (_cache[9] = [createBaseVNode("path", {
+				}, null, -1)])])) : (openBlock(), createElementBlock("svg", _hoisted_4$9, [..._cache[9] || (_cache[9] = [createBaseVNode("path", {
 					"stroke-linecap": "round",
 					"stroke-linejoin": "round",
 					"stroke-width": "2",
 					d: "M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-				}, null, -1)])]))], 8, _hoisted_2$8),
-				createBaseVNode("div", { class: normalizeClass(["relative z-10 w-full max-w-md transition-all duration-700 ease-out", isMounted.value ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"]) }, [createBaseVNode("div", _hoisted_5$5, [createBaseVNode("div", _hoisted_6$5, [
-					createBaseVNode("div", _hoisted_7$5, [createBaseVNode("span", {
+				}, null, -1)])]))], 8, _hoisted_2$9),
+				createBaseVNode("div", { class: normalizeClass(["relative z-10 w-full max-w-md transition-all duration-700 ease-out", isMounted.value ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"]) }, [createBaseVNode("div", _hoisted_5$8, [createBaseVNode("div", _hoisted_6$7, [
+					createBaseVNode("div", _hoisted_7$6, [createBaseVNode("span", {
 						class: "login-favicon-icon",
 						innerHTML: unref(favicon_default),
 						"aria-hidden": "true"
-					}, null, 8, _hoisted_8$5)]),
-					_cache[10] || (_cache[10] = createBaseVNode("h1", {
-						class: "text-2xl font-bold tracking-tight",
-						style: { "color": "var(--text-primary)" }
-					}, " CGV Lab Server Assistant ", -1)),
-					_cache[11] || (_cache[11] = createBaseVNode("p", {
+					}, null, 8, _hoisted_8$6)]),
+					createBaseVNode("h1", _hoisted_9$6, toDisplayString(unref(APP_CONFIG).name), 1),
+					_cache[10] || (_cache[10] = createBaseVNode("p", {
 						class: "mt-2 text-sm",
 						style: { "color": "var(--text-tertiary)" }
 					}, " 請輸入伺服器系統使用者帳號與密碼 ", -1))
@@ -553,11 +655,11 @@ var _sfc_main$11 = {
 					class: "space-y-5",
 					onSubmit: withModifiers(handleLogin, ["prevent"])
 				}, [
-					createBaseVNode("div", null, [_cache[13] || (_cache[13] = createBaseVNode("label", {
+					createBaseVNode("div", null, [_cache[12] || (_cache[12] = createBaseVNode("label", {
 						for: "username",
 						class: "block text-sm font-medium mb-2",
 						style: { "color": "var(--text-secondary)" }
-					}, " 使用者名稱 ", -1)), createBaseVNode("div", _hoisted_9$5, [createBaseVNode("div", _hoisted_10$5, [(openBlock(), createElementBlock("svg", _hoisted_11$5, [..._cache[12] || (_cache[12] = [createBaseVNode("path", {
+					}, " 使用者名稱 ", -1)), createBaseVNode("div", _hoisted_10$6, [createBaseVNode("div", _hoisted_11$6, [(openBlock(), createElementBlock("svg", _hoisted_12$6, [..._cache[11] || (_cache[11] = [createBaseVNode("path", {
 						"stroke-linecap": "round",
 						"stroke-linejoin": "round",
 						"stroke-width": "1.5",
@@ -578,12 +680,12 @@ var _sfc_main$11 = {
 						onFocus: _cache[2] || (_cache[2] = ($event) => $event.target.style.borderColor = "var(--accent-primary)"),
 						onBlur: _cache[3] || (_cache[3] = ($event) => $event.target.style.borderColor = "var(--border-primary)")
 					}, null, 544), [[vModelText, username.value]])])]),
-					createBaseVNode("div", null, [_cache[17] || (_cache[17] = createBaseVNode("label", {
+					createBaseVNode("div", null, [_cache[16] || (_cache[16] = createBaseVNode("label", {
 						for: "password",
 						class: "block text-sm font-medium mb-2",
 						style: { "color": "var(--text-secondary)" }
-					}, " 密碼 ", -1)), createBaseVNode("div", _hoisted_12$4, [
-						createBaseVNode("div", _hoisted_13$4, [(openBlock(), createElementBlock("svg", _hoisted_14$4, [..._cache[14] || (_cache[14] = [createBaseVNode("path", {
+					}, " 密碼 ", -1)), createBaseVNode("div", _hoisted_13$5, [
+						createBaseVNode("div", _hoisted_14$5, [(openBlock(), createElementBlock("svg", _hoisted_15$5, [..._cache[13] || (_cache[13] = [createBaseVNode("path", {
 							"stroke-linecap": "round",
 							"stroke-linejoin": "round",
 							"stroke-width": "1.5",
@@ -603,7 +705,7 @@ var _sfc_main$11 = {
 							},
 							onFocus: _cache[5] || (_cache[5] = ($event) => $event.target.style.borderColor = "var(--accent-primary)"),
 							onBlur: _cache[6] || (_cache[6] = ($event) => $event.target.style.borderColor = "var(--border-primary)")
-						}, null, 40, _hoisted_15$4), [[vModelDynamic, password.value]]),
+						}, null, 40, _hoisted_16$5), [[vModelDynamic, password.value]]),
 						createBaseVNode("button", {
 							type: "button",
 							class: "absolute inset-y-0 right-0 px-3 flex items-center rounded-r-xl transition-colors hover:opacity-80",
@@ -612,7 +714,7 @@ var _sfc_main$11 = {
 							title: showPassword.value ? "隱藏密碼" : "顯示密碼",
 							"aria-pressed": showPassword.value,
 							onClick: _cache[7] || (_cache[7] = ($event) => showPassword.value = !showPassword.value)
-						}, [showPassword.value ? (openBlock(), createElementBlock("svg", _hoisted_17$4, [..._cache[15] || (_cache[15] = [createBaseVNode("path", {
+						}, [showPassword.value ? (openBlock(), createElementBlock("svg", _hoisted_18$4, [..._cache[14] || (_cache[14] = [createBaseVNode("path", {
 							"stroke-linecap": "round",
 							"stroke-linejoin": "round",
 							"stroke-width": "1.5",
@@ -622,18 +724,19 @@ var _sfc_main$11 = {
 							"stroke-linejoin": "round",
 							"stroke-width": "1.5",
 							d: "M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-						}, null, -1)])])) : (openBlock(), createElementBlock("svg", _hoisted_18$4, [..._cache[16] || (_cache[16] = [createBaseVNode("path", {
+						}, null, -1)])])) : (openBlock(), createElementBlock("svg", _hoisted_19$4, [..._cache[15] || (_cache[15] = [createBaseVNode("path", {
 							"stroke-linecap": "round",
 							"stroke-linejoin": "round",
 							"stroke-width": "1.5",
 							d: "M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.97 9.97 0 012.065-3.633M6.64 6.635A9.953 9.953 0 0112 5c4.477 0 8.268 2.943 9.542 7a9.97 9.97 0 01-1.88 3.37M15 12a3 3 0 11-6 0 3 3 0 016 0zm-6.364-6.364L3 3m18 18l-3.636-3.636"
-						}, null, -1)])]))], 8, _hoisted_16$4)
+						}, null, -1)])]))], 8, _hoisted_17$4)
 					])]),
+					lockoutWarning.value ? (openBlock(), createElementBlock("div", _hoisted_20$4, toDisplayString(lockoutWarning.value), 1)) : createCommentVNode("", true),
 					createBaseVNode("button", {
 						type: "submit",
-						disabled: isLoading.value,
+						disabled: isLoading.value || isLockedOut.value,
 						class: "login-btn flex w-full justify-center items-center rounded-xl py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-					}, [isLoading.value ? (openBlock(), createElementBlock("svg", _hoisted_20$4, [..._cache[18] || (_cache[18] = [createBaseVNode("circle", {
+					}, [isLoading.value ? (openBlock(), createElementBlock("svg", _hoisted_22$4, [..._cache[17] || (_cache[17] = [createBaseVNode("circle", {
 						class: "opacity-25",
 						cx: "12",
 						cy: "12",
@@ -644,13 +747,13 @@ var _sfc_main$11 = {
 						class: "opacity-75",
 						fill: "currentColor",
 						d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-					}, null, -1)])])) : createCommentVNode("", true), createTextVNode(" " + toDisplayString(isLoading.value ? "驗證中..." : "登入"), 1)], 8, _hoisted_19$4),
-					message.value ? (openBlock(), createElementBlock("div", {
-						key: 0,
+					}, null, -1)])])) : createCommentVNode("", true), createTextVNode(" " + toDisplayString(isLoading.value ? "驗證中..." : isLockedOut.value ? "帳號已鎖定" : "登入"), 1)], 8, _hoisted_21$4),
+					displayMessage.value ? (openBlock(), createElementBlock("div", {
+						key: 1,
 						class: "text-center text-sm font-medium",
-						style: normalizeStyle({ color: isError.value ? "var(--accent-danger)" : "var(--accent-success)" })
-					}, toDisplayString(message.value), 5)) : createCommentVNode("", true)
-				], 32)]), _cache[19] || (_cache[19] = createBaseVNode("p", {
+						style: normalizeStyle({ color: isError.value || isLockedOut.value ? "var(--accent-danger)" : "var(--accent-success)" })
+					}, toDisplayString(displayMessage.value), 5)) : createCommentVNode("", true)
+				], 32)]), _cache[18] || (_cache[18] = createBaseVNode("p", {
 					class: "text-center text-xs mt-6",
 					style: { "color": "var(--text-tertiary)" }
 				}, " Server Assistant v1.0 ", -1))], 2)
@@ -658,51 +761,17 @@ var _sfc_main$11 = {
 		};
 	}
 };
-var Login_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$11, [["__scopeId", "data-v-fbe17a8c"]]);
-
-//#endregion
-//#region src/components/ModelSwitchToast.vue
-var _hoisted_1$10 = {
-	key: 0,
-	class: "fixed top-6 left-1/2 -translate-x-1/2 z-50 rounded-xl px-4 py-2 text-sm font-medium shadow-lg border",
-	style: {
-		"background-color": "var(--bg-tertiary)",
-		"color": "var(--text-primary)",
-		"border-color": "color-mix(in srgb, var(--accent-primary) 35%, var(--border-primary))"
-	}
-};
-var _sfc_main$10 = {
-	__name: "ModelSwitchToast",
-	props: {
-		show: {
-			type: Boolean,
-			required: true
-		},
-		message: {
-			type: String,
-			default: ""
-		}
-	},
-	setup(__props) {
-		return (_ctx, _cache) => {
-			return openBlock(), createBlock(Transition, { name: "model-switch-toast" }, {
-				default: withCtx(() => [__props.show ? (openBlock(), createElementBlock("div", _hoisted_1$10, toDisplayString(__props.message), 1)) : createCommentVNode("", true)]),
-				_: 1
-			});
-		};
-	}
-};
-var ModelSwitchToast_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$10, [["__scopeId", "data-v-12c0d34b"]]);
+var Login_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$11, [["__scopeId", "data-v-c6001b7a"]]);
 
 //#endregion
 //#region src/components/NetworkOfflineBanner.vue
-var _hoisted_1$9 = {
+var _hoisted_1$10 = {
 	key: 0,
 	class: "network-offline-banner",
 	role: "status",
 	"aria-live": "polite"
 };
-var _sfc_main$9 = {
+var _sfc_main$10 = {
 	__name: "NetworkOfflineBanner",
 	props: { show: {
 		type: Boolean,
@@ -711,18 +780,18 @@ var _sfc_main$9 = {
 	setup(__props) {
 		return (_ctx, _cache) => {
 			return openBlock(), createBlock(Transition, { name: "network-banner" }, {
-				default: withCtx(() => [__props.show ? (openBlock(), createElementBlock("div", _hoisted_1$9, " 網路連線中斷，恢復後會自動重新載入目前對話歷史。 ")) : createCommentVNode("", true)]),
+				default: withCtx(() => [__props.show ? (openBlock(), createElementBlock("div", _hoisted_1$10, " 網路連線中斷，恢復後會自動重新載入目前對話歷史。 ")) : createCommentVNode("", true)]),
 				_: 1
 			});
 		};
 	}
 };
-var NetworkOfflineBanner_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$9, [["__scopeId", "data-v-3a35a6fb"]]);
+var NetworkOfflineBanner_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$10, [["__scopeId", "data-v-3a35a6fb"]]);
 
 //#endregion
 //#region src/components/ShortcutHelpDialog.vue
-var _hoisted_1$8 = { class: "flex items-start justify-between gap-3" };
-var _sfc_main$8 = {
+var _hoisted_1$9 = { class: "flex items-start justify-between gap-3" };
+var _sfc_main$9 = {
 	__name: "ShortcutHelpDialog",
 	props: { isOpen: {
 		type: Boolean,
@@ -747,7 +816,7 @@ var _sfc_main$8 = {
 					"aria-modal": "true",
 					"aria-label": "快捷鍵說明",
 					onClick: _cache[1] || (_cache[1] = withModifiers(() => {}, ["stop"]))
-				}, [createBaseVNode("div", _hoisted_1$8, [_cache[3] || (_cache[3] = createBaseVNode("div", null, [createBaseVNode("h2", {
+				}, [createBaseVNode("div", _hoisted_1$9, [_cache[3] || (_cache[3] = createBaseVNode("div", null, [createBaseVNode("h2", {
 					class: "text-base font-semibold",
 					style: { "color": "var(--text-primary)" }
 				}, "快捷鍵"), createBaseVNode("p", {
@@ -821,59 +890,75 @@ var _sfc_main$8 = {
 		};
 	}
 };
-var ShortcutHelpDialog_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$8, [["__scopeId", "data-v-435ded59"]]);
+var ShortcutHelpDialog_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$9, [["__scopeId", "data-v-435ded59"]]);
 
 //#endregion
-//#region src/components/UndoDeleteToast.vue
-var _hoisted_1$7 = {
+//#region src/components/ToastContainer.vue
+var _hoisted_1$8 = {
 	key: 0,
-	class: "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl shadow-lg px-4 py-3 flex flex-col gap-2 min-w-[280px] max-w-sm",
-	style: {
-		"background-color": "var(--bg-tertiary)",
-		"border": "1px solid var(--border-primary)"
-	}
+	class: "text-sm font-medium",
+	style: { "color": "var(--text-primary)" }
 };
-var _hoisted_2$7 = { class: "flex items-center justify-between gap-4" };
-var _hoisted_3$7 = {
+var _hoisted_2$8 = {
+	key: 1,
+	class: "flex flex-col gap-2"
+};
+var _hoisted_3$8 = { class: "flex items-center justify-between gap-4" };
+var _hoisted_4$8 = {
 	class: "text-sm truncate",
 	style: { "color": "var(--text-primary)" }
 };
-var _sfc_main$7 = {
-	__name: "UndoDeleteToast",
-	props: { pendingDelete: {
-		type: Object,
-		default: null
+var _hoisted_5$7 = ["onClick"];
+var _hoisted_6$6 = {
+	class: "h-0.5 rounded-full overflow-hidden",
+	style: { "background-color": "var(--border-primary)" }
+};
+var _sfc_main$8 = {
+	__name: "ToastContainer",
+	props: { toasts: {
+		type: Array,
+		required: true
 	} },
-	emits: ["undo", "dismiss"],
+	emits: ["action", "dismiss"],
 	setup(__props) {
 		return (_ctx, _cache) => {
-			return openBlock(), createBlock(Transition, { name: "toast-slide" }, {
-				default: withCtx(() => [__props.pendingDelete ? (openBlock(), createElementBlock("div", _hoisted_1$7, [createBaseVNode("div", _hoisted_2$7, [createBaseVNode("span", _hoisted_3$7, " 已刪除「" + toDisplayString(__props.pendingDelete.title) + "」 ", 1), createBaseVNode("button", {
-					onClick: _cache[0] || (_cache[0] = ($event) => _ctx.$emit("undo")),
-					class: "shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all hover:scale-105",
-					style: {
-						"background-color": "color-mix(in srgb, var(--accent-primary) 20%, transparent)",
-						"color": "var(--accent-primary)"
-					}
-				}, " 復原 ")]), _cache[1] || (_cache[1] = createBaseVNode("div", {
-					class: "h-0.5 rounded-full overflow-hidden",
-					style: { "background-color": "var(--border-primary)" }
-				}, [createBaseVNode("div", {
-					class: "h-full rounded-full toast-countdown",
-					style: { "background-color": "var(--accent-primary)" }
-				})], -1))])) : createCommentVNode("", true)]),
+			return openBlock(), createBlock(TransitionGroup, {
+				name: "toast-stack",
+				tag: "div",
+				class: "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col-reverse gap-2 items-center pointer-events-none"
+			}, {
+				default: withCtx(() => [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.toasts, (toast) => {
+					return openBlock(), createElementBlock("div", {
+						key: toast.id,
+						class: normalizeClass(["pointer-events-auto rounded-xl shadow-lg border", toast.type === "undo" ? "px-4 py-3 min-w-[280px] max-w-sm" : "px-4 py-2"]),
+						style: {
+							"background-color": "var(--bg-tertiary)",
+							"border-color": "var(--border-primary)"
+						}
+					}, [toast.type === "info" ? (openBlock(), createElementBlock("span", _hoisted_1$8, toDisplayString(toast.message), 1)) : toast.type === "undo" ? (openBlock(), createElementBlock("div", _hoisted_2$8, [createBaseVNode("div", _hoisted_3$8, [createBaseVNode("span", _hoisted_4$8, toDisplayString(toast.message), 1), createBaseVNode("button", {
+						onClick: ($event) => _ctx.$emit("action", toast.id),
+						class: "shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all hover:scale-105",
+						style: {
+							"background-color": "color-mix(in srgb, var(--accent-primary) 20%, transparent)",
+							"color": "var(--accent-primary)"
+						}
+					}, " 復原 ", 8, _hoisted_5$7)]), createBaseVNode("div", _hoisted_6$6, [createBaseVNode("div", {
+						class: "h-full rounded-full toast-countdown",
+						style: normalizeStyle(`background-color: var(--accent-primary); animation-duration: ${toast.duration}ms;`)
+					}, null, 4)])])) : createCommentVNode("", true)], 2);
+				}), 128))]),
 				_: 1
 			});
 		};
 	}
 };
-var UndoDeleteToast_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$7, [["__scopeId", "data-v-db6f4089"]]);
+var ToastContainer_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$8, [["__scopeId", "data-v-bf0fb810"]]);
 
 //#endregion
 //#region src/components/Sidebar.vue
-var _hoisted_1$6 = ["inert", "aria-hidden"];
-var _hoisted_2$6 = { class: "p-3 flex flex-col gap-2" };
-var _hoisted_3$6 = {
+var _hoisted_1$7 = ["inert", "aria-hidden"];
+var _hoisted_2$7 = { class: "p-3 flex flex-col gap-2" };
+var _hoisted_3$7 = {
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-4 w-4",
 	fill: "none",
@@ -881,8 +966,8 @@ var _hoisted_3$6 = {
 	stroke: "currentColor",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_4$5 = { class: "relative" };
-var _hoisted_5$4 = {
+var _hoisted_4$7 = { class: "relative" };
+var _hoisted_5$6 = {
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none",
 	fill: "none",
@@ -890,24 +975,23 @@ var _hoisted_5$4 = {
 	stroke: "currentColor",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_6$4 = { class: "flex-1 overflow-y-auto px-2 py-1 custom-scrollbar" };
-var _hoisted_7$4 = {
+var _hoisted_6$5 = {
 	key: 0,
-	class: "px-3 py-8 flex flex-col items-center gap-3 text-center"
-};
-var _hoisted_8$4 = {
-	xmlns: "http://www.w3.org/2000/svg",
-	class: "h-10 w-10 opacity-30",
-	fill: "none",
-	viewBox: "0 0 24 24",
-	stroke: "currentColor",
+	class: "absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_9$4 = {
+var _hoisted_7$5 = { class: "flex-1 overflow-y-auto px-2 py-1 custom-scrollbar" };
+var _hoisted_8$5 = {
+	key: 0,
+	class: "px-2 py-1",
+	"aria-busy": "true",
+	"aria-label": "載入對話中"
+};
+var _hoisted_9$5 = {
 	key: 1,
 	class: "px-3 py-8 flex flex-col items-center gap-3 text-center"
 };
-var _hoisted_10$4 = {
+var _hoisted_10$5 = {
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-10 w-10 opacity-30",
 	fill: "none",
@@ -915,8 +999,20 @@ var _hoisted_10$4 = {
 	stroke: "currentColor",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_11$4 = { class: "flex items-center gap-1.5 px-3 pt-3 pb-1" };
-var _hoisted_12$3 = {
+var _hoisted_11$5 = {
+	key: 2,
+	class: "px-3 py-8 flex flex-col items-center gap-3 text-center"
+};
+var _hoisted_12$5 = {
+	xmlns: "http://www.w3.org/2000/svg",
+	class: "h-10 w-10 opacity-30",
+	fill: "none",
+	viewBox: "0 0 24 24",
+	stroke: "currentColor",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_13$4 = { class: "flex items-center gap-1.5 px-3 pt-3 pb-1" };
+var _hoisted_14$4 = {
 	key: 0,
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-3 w-3 shrink-0",
@@ -924,41 +1020,41 @@ var _hoisted_12$3 = {
 	fill: "currentColor",
 	style: { "color": "var(--accent-primary)" }
 };
-var _hoisted_13$3 = {
+var _hoisted_15$4 = {
 	class: "text-[10px] font-semibold uppercase tracking-widest",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_14$3 = ["onClick", "onKeydown"];
-var _hoisted_15$3 = { class: "flex-1 min-w-0 mr-2" };
-var _hoisted_16$3 = { class: "truncate text-sm" };
-var _hoisted_17$3 = {
+var _hoisted_16$4 = ["onClick", "onKeydown"];
+var _hoisted_17$3 = { class: "flex-1 min-w-0 mr-2" };
+var _hoisted_18$3 = { class: "truncate text-sm" };
+var _hoisted_19$3 = {
 	class: "flex items-center gap-1.5 mt-0.5",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_18$3 = {
+var _hoisted_20$3 = {
 	key: 0,
 	class: "text-[10px]"
 };
-var _hoisted_19$3 = {
+var _hoisted_21$3 = {
 	key: 1,
 	class: "text-[10px]"
 };
-var _hoisted_20$3 = {
+var _hoisted_22$3 = {
 	key: 2,
 	class: "text-[10px]"
 };
-var _hoisted_21$2 = {
+var _hoisted_23$2 = {
 	key: 0,
 	class: "text-[10px] mt-0.5 font-medium",
 	style: { "color": "var(--accent-danger)" }
 };
-var _hoisted_22$2 = {
+var _hoisted_24$2 = {
 	class: "relative flex items-center gap-1",
 	"data-sidebar-chat-actions": ""
 };
-var _hoisted_23$2 = ["onClick", "aria-expanded"];
-var _hoisted_24$2 = ["onClick"];
-var _hoisted_25$2 = {
+var _hoisted_25$2 = ["onClick", "aria-expanded"];
+var _hoisted_26$2 = ["onClick"];
+var _hoisted_27$2 = {
 	key: 0,
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-3.5 w-3.5 shrink-0",
@@ -966,7 +1062,7 @@ var _hoisted_25$2 = {
 	fill: "currentColor",
 	style: { "color": "var(--accent-primary)" }
 };
-var _hoisted_26$2 = {
+var _hoisted_28$2 = {
 	key: 1,
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-3.5 w-3.5 shrink-0",
@@ -974,15 +1070,16 @@ var _hoisted_26$2 = {
 	viewBox: "0 0 24 24",
 	stroke: "currentColor"
 };
-var _hoisted_27$2 = ["onClick"];
-var _hoisted_28$1 = ["onClick"];
-var _hoisted_29$1 = [
+var _hoisted_29$2 = ["onClick"];
+var _hoisted_30$1 = ["onClick"];
+var _hoisted_31 = [
 	"onClick",
 	"title",
 	"aria-label"
 ];
+var SEARCH_DEBOUNCE_MS = 300;
 var PINNED_KEY = "sidebar_pinned_conversations";
-var _sfc_main$6 = {
+var _sfc_main$7 = {
 	__name: "Sidebar",
 	props: {
 		isOpen: {
@@ -996,6 +1093,10 @@ var _sfc_main$6 = {
 		currentId: {
 			type: String,
 			default: ""
+		},
+		loading: {
+			type: Boolean,
+			default: false
 		}
 	},
 	emits: [
@@ -1008,11 +1109,14 @@ var _sfc_main$6 = {
 		const props = __props;
 		const emit = __emit;
 		const searchQuery = ref("");
+		const debouncedSearchQuery = ref("");
+		const isSearchDebouncing = ref(false);
 		const searchInputRef = ref(null);
 		const isTouchDevice = ref(window.matchMedia("(hover: none)").matches);
 		const pendingDeleteId = ref("");
 		const openActionMenuId = ref("");
 		let resetDeleteIntentTimer = null;
+		let searchDebounceTimer = null;
 		const pinnedIds = ref(new Set(JSON.parse(localStorage.getItem(PINNED_KEY) || "[]")));
 		function savePinned() {
 			localStorage.setItem(PINNED_KEY, JSON.stringify([...pinnedIds.value]));
@@ -1047,7 +1151,7 @@ var _sfc_main$6 = {
 			"更早"
 		];
 		const groupedConversations = computed(() => {
-			const q = searchQuery.value.trim().toLowerCase();
+			const q = debouncedSearchQuery.value;
 			const all = props.conversations;
 			if (q) {
 				const filtered = all.filter((c) => c.title?.toLowerCase().includes(q));
@@ -1078,8 +1182,30 @@ var _sfc_main$6 = {
 			return groups;
 		});
 		const hasNoSearchResults = computed(() => {
-			return searchQuery.value.trim() !== "" && groupedConversations.value.length > 0 && groupedConversations.value[0].items.length === 0;
+			return debouncedSearchQuery.value !== "" && !isSearchDebouncing.value && groupedConversations.value.length > 0 && groupedConversations.value[0].items.length === 0;
 		});
+		watch(searchQuery, (value) => {
+			const normalizedQuery = value.trim().toLowerCase();
+			if (searchDebounceTimer) {
+				clearTimeout(searchDebounceTimer);
+				searchDebounceTimer = null;
+			}
+			if (!normalizedQuery) {
+				debouncedSearchQuery.value = "";
+				isSearchDebouncing.value = false;
+				return;
+			}
+			if (normalizedQuery === debouncedSearchQuery.value) {
+				isSearchDebouncing.value = false;
+				return;
+			}
+			isSearchDebouncing.value = true;
+			searchDebounceTimer = setTimeout(() => {
+				debouncedSearchQuery.value = normalizedQuery;
+				isSearchDebouncing.value = false;
+				searchDebounceTimer = null;
+			}, SEARCH_DEBOUNCE_MS);
+		}, { immediate: true });
 		function clearDeleteIntent() {
 			if (resetDeleteIntentTimer) {
 				clearTimeout(resetDeleteIntentTimer);
@@ -1167,6 +1293,10 @@ var _sfc_main$6 = {
 		});
 		onBeforeUnmount(() => {
 			clearDeleteIntent();
+			if (searchDebounceTimer) {
+				clearTimeout(searchDebounceTimer);
+				searchDebounceTimer = null;
+			}
 			window.removeEventListener("pointerdown", handleGlobalPointerDown);
 			window.removeEventListener("keydown", handleGlobalKeydown);
 		});
@@ -1198,42 +1328,71 @@ var _sfc_main$6 = {
 				inert: !__props.isOpen,
 				"aria-hidden": !__props.isOpen
 			}, [
-				createBaseVNode("div", _hoisted_2$6, [createBaseVNode("button", {
+				createBaseVNode("div", _hoisted_2$7, [createBaseVNode("button", {
 					onClick: _cache[0] || (_cache[0] = ($event) => _ctx.$emit("new-chat")),
-					class: "w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all text-left hover:scale-[1.02]",
-					style: {
-						"background-color": "var(--bg-tertiary)",
-						"color": "var(--text-primary)"
-					}
-				}, [(openBlock(), createElementBlock("svg", _hoisted_3$6, [..._cache[3] || (_cache[3] = [createBaseVNode("path", {
+					class: normalizeClass(["w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all text-left hover:scale-[1.02]", { "new-chat-highlight": !__props.loading && __props.conversations.length === 0 }]),
+					style: normalizeStyle({
+						backgroundColor: !__props.loading && __props.conversations.length === 0 ? "color-mix(in srgb, var(--accent-primary) 12%, var(--bg-tertiary))" : "var(--bg-tertiary)",
+						color: "var(--text-primary)"
+					})
+				}, [(openBlock(), createElementBlock("svg", _hoisted_3$7, [..._cache[3] || (_cache[3] = [createBaseVNode("path", {
 					"stroke-linecap": "round",
 					"stroke-linejoin": "round",
 					"stroke-width": "2",
 					d: "M12 4v16m8-8H4"
-				}, null, -1)])])), _cache[4] || (_cache[4] = createBaseVNode("span", null, "新對話", -1))]), createBaseVNode("div", _hoisted_4$5, [(openBlock(), createElementBlock("svg", _hoisted_5$4, [..._cache[5] || (_cache[5] = [createBaseVNode("path", {
-					"stroke-linecap": "round",
-					"stroke-linejoin": "round",
-					"stroke-width": "2",
-					d: "M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-				}, null, -1)])])), withDirectives(createBaseVNode("input", {
-					ref_key: "searchInputRef",
-					ref: searchInputRef,
-					"onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => searchQuery.value = $event),
-					type: "text",
-					placeholder: "搜尋對話...",
-					class: "w-full pl-8 pr-3 py-1.5 text-xs rounded-lg outline-none transition-all",
-					style: {
-						"background-color": "var(--bg-tertiary)",
-						"color": "var(--text-primary)",
-						"border": "1px solid var(--border-primary)"
-					}
-				}, null, 512), [[vModelText, searchQuery.value]])])]),
-				createBaseVNode("div", _hoisted_6$4, [__props.conversations.length === 0 && !searchQuery.value.trim() ? (openBlock(), createElementBlock("div", _hoisted_7$4, [(openBlock(), createElementBlock("svg", _hoisted_8$4, [..._cache[6] || (_cache[6] = [createBaseVNode("path", {
+				}, null, -1)])])), _cache[4] || (_cache[4] = createBaseVNode("span", null, "新對話", -1))], 6), createBaseVNode("div", _hoisted_4$7, [
+					(openBlock(), createElementBlock("svg", _hoisted_5$6, [..._cache[5] || (_cache[5] = [createBaseVNode("path", {
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round",
+						"stroke-width": "2",
+						d: "M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
+					}, null, -1)])])),
+					withDirectives(createBaseVNode("input", {
+						ref_key: "searchInputRef",
+						ref: searchInputRef,
+						"onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => searchQuery.value = $event),
+						type: "text",
+						placeholder: "搜尋對話...",
+						class: "w-full pl-8 pr-8 py-1.5 text-xs rounded-lg outline-none transition-all",
+						style: {
+							"background-color": "var(--bg-tertiary)",
+							"color": "var(--text-primary)",
+							"border": "1px solid var(--border-primary)"
+						}
+					}, null, 512), [[vModelText, searchQuery.value]]),
+					isSearchDebouncing.value ? (openBlock(), createElementBlock("span", _hoisted_6$5, [..._cache[6] || (_cache[6] = [createBaseVNode("svg", {
+						xmlns: "http://www.w3.org/2000/svg",
+						class: "h-3 w-3 animate-spin shrink-0",
+						fill: "none",
+						viewBox: "0 0 24 24",
+						"aria-hidden": "true"
+					}, [createBaseVNode("circle", {
+						class: "opacity-25",
+						cx: "12",
+						cy: "12",
+						r: "10",
+						stroke: "currentColor",
+						"stroke-width": "3"
+					}), createBaseVNode("path", {
+						class: "opacity-90",
+						fill: "currentColor",
+						d: "M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z"
+					})], -1), createBaseVNode("span", { class: "text-xs" }, "搜尋中…", -1)])])) : createCommentVNode("", true)
+				])]),
+				createBaseVNode("div", _hoisted_7$5, [__props.loading && __props.conversations.length === 0 && !searchQuery.value.trim() ? (openBlock(), createElementBlock("div", _hoisted_8$5, [_cache[8] || (_cache[8] = createBaseVNode("div", { class: "px-3 pt-3 pb-1" }, [createBaseVNode("div", { class: "skeleton-shimmer h-2 w-10 rounded" })], -1)), (openBlock(), createElementBlock(Fragment, null, renderList(5, (i) => {
+					return createBaseVNode("div", {
+						key: i,
+						class: "px-3 py-2 mb-0.5 rounded-lg"
+					}, [createBaseVNode("div", {
+						class: "skeleton-shimmer h-3 rounded mb-1.5",
+						style: normalizeStyle({ width: 52 + i * 7 + "%" })
+					}, null, 4), _cache[7] || (_cache[7] = createBaseVNode("div", { class: "skeleton-shimmer h-2 rounded w-14" }, null, -1))]);
+				}), 64))])) : __props.conversations.length === 0 && !searchQuery.value.trim() ? (openBlock(), createElementBlock("div", _hoisted_9$5, [(openBlock(), createElementBlock("svg", _hoisted_10$5, [..._cache[9] || (_cache[9] = [createBaseVNode("path", {
 					"stroke-linecap": "round",
 					"stroke-linejoin": "round",
 					"stroke-width": "1.5",
 					d: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-				}, null, -1)])])), _cache[7] || (_cache[7] = createBaseVNode("div", null, [createBaseVNode("p", {
+				}, null, -1)])])), _cache[10] || (_cache[10] = createBaseVNode("div", null, [createBaseVNode("p", {
 					class: "text-xs font-medium mb-1",
 					style: { "color": "var(--text-secondary)" }
 				}, "尚無任何對話"), createBaseVNode("p", {
@@ -1243,38 +1402,38 @@ var _sfc_main$6 = {
 					createTextVNode("點擊上方「新對話」按鈕"),
 					createBaseVNode("br"),
 					createTextVNode("開始與 AI 互動")
-				])], -1))])) : hasNoSearchResults.value ? (openBlock(), createElementBlock("div", _hoisted_9$4, [(openBlock(), createElementBlock("svg", _hoisted_10$4, [..._cache[8] || (_cache[8] = [createBaseVNode("path", {
+				])], -1))])) : hasNoSearchResults.value ? (openBlock(), createElementBlock("div", _hoisted_11$5, [(openBlock(), createElementBlock("svg", _hoisted_12$5, [..._cache[11] || (_cache[11] = [createBaseVNode("path", {
 					"stroke-linecap": "round",
 					"stroke-linejoin": "round",
 					"stroke-width": "1.5",
 					d: "M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-				}, null, -1)])])), _cache[9] || (_cache[9] = createBaseVNode("div", null, [createBaseVNode("p", {
+				}, null, -1)])])), _cache[12] || (_cache[12] = createBaseVNode("div", null, [createBaseVNode("p", {
 					class: "text-xs font-medium mb-1",
 					style: { "color": "var(--text-secondary)" }
 				}, "找不到符合的對話"), createBaseVNode("p", {
 					class: "text-[11px] leading-relaxed",
 					style: { "color": "var(--text-tertiary)" }
-				}, "試試其他關鍵字")], -1))])) : (openBlock(true), createElementBlock(Fragment, { key: 2 }, renderList(groupedConversations.value, (group) => {
-					return openBlock(), createElementBlock(Fragment, { key: group.label }, [createBaseVNode("div", _hoisted_11$4, [group.isPinned ? (openBlock(), createElementBlock("svg", _hoisted_12$3, [..._cache[10] || (_cache[10] = [createBaseVNode("path", { d: "M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z" }, null, -1)])])) : createCommentVNode("", true), createBaseVNode("span", _hoisted_13$3, toDisplayString(group.label), 1)]), (openBlock(true), createElementBlock(Fragment, null, renderList(group.items, (chat) => {
+				}, "試試其他關鍵字")], -1))])) : (openBlock(true), createElementBlock(Fragment, { key: 3 }, renderList(groupedConversations.value, (group) => {
+					return openBlock(), createElementBlock(Fragment, { key: group.label }, [createBaseVNode("div", _hoisted_13$4, [group.isPinned ? (openBlock(), createElementBlock("svg", _hoisted_14$4, [..._cache[13] || (_cache[13] = [createBaseVNode("path", { d: "M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z" }, null, -1)])])) : createCommentVNode("", true), createBaseVNode("span", _hoisted_15$4, toDisplayString(group.label), 1)]), (openBlock(true), createElementBlock(Fragment, null, renderList(group.items, (chat) => {
 						return openBlock(), createElementBlock("div", {
 							key: chat.id,
 							onClick: ($event) => handleSelectChat(chat.id),
 							onKeydown: ($event) => handleChatKeyboardSelect($event, chat.id),
 							class: normalizeClass(["chat-item group flex items-center justify-between px-3 py-2 mb-0.5 text-sm rounded-lg cursor-pointer transition-all", {
 								"chat-item--active": __props.currentId === chat.id,
-								"chat-item--pinned": pinnedIds.value.has(chat.id) && !searchQuery.value.trim()
+								"chat-item--pinned": pinnedIds.value.has(chat.id) && !debouncedSearchQuery.value
 							}]),
 							role: "button",
 							tabindex: "0"
-						}, [createBaseVNode("div", _hoisted_15$3, [
-							createBaseVNode("div", _hoisted_16$3, toDisplayString(chat.title), 1),
-							createBaseVNode("div", _hoisted_17$3, [
-								chat.updatedAt ? (openBlock(), createElementBlock("span", _hoisted_18$3, toDisplayString(formatRelativeTime(chat.updatedAt)), 1)) : createCommentVNode("", true),
-								chat.updatedAt && chat.messageCount ? (openBlock(), createElementBlock("span", _hoisted_19$3, "·")) : createCommentVNode("", true),
-								chat.messageCount ? (openBlock(), createElementBlock("span", _hoisted_20$3, toDisplayString(chat.messageCount) + " 則", 1)) : createCommentVNode("", true)
+						}, [createBaseVNode("div", _hoisted_17$3, [
+							createBaseVNode("div", _hoisted_18$3, toDisplayString(chat.title), 1),
+							createBaseVNode("div", _hoisted_19$3, [
+								chat.updatedAt ? (openBlock(), createElementBlock("span", _hoisted_20$3, toDisplayString(formatRelativeTime(chat.updatedAt)), 1)) : createCommentVNode("", true),
+								chat.updatedAt && chat.messageCount ? (openBlock(), createElementBlock("span", _hoisted_21$3, "·")) : createCommentVNode("", true),
+								chat.messageCount ? (openBlock(), createElementBlock("span", _hoisted_22$3, toDisplayString(chat.messageCount) + " 則", 1)) : createCommentVNode("", true)
 							]),
-							isTouchDevice.value && pendingDeleteId.value === chat.id ? (openBlock(), createElementBlock("div", _hoisted_21$2, " 再按一次刪除 ")) : createCommentVNode("", true)
-						]), createBaseVNode("div", _hoisted_22$2, [
+							isTouchDevice.value && pendingDeleteId.value === chat.id ? (openBlock(), createElementBlock("div", _hoisted_23$2, " 再按一次刪除 ")) : createCommentVNode("", true)
+						]), createBaseVNode("div", _hoisted_24$2, [
 							createBaseVNode("button", {
 								onClick: withModifiers(($event) => toggleActionMenu(chat.id), ["stop"]),
 								class: normalizeClass([isTouchDevice.value ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100", "sidebar-menu-button p-1 rounded transition-all"]),
@@ -1282,7 +1441,7 @@ var _sfc_main$6 = {
 								"aria-label": "對話選單",
 								"aria-expanded": openActionMenuId.value === chat.id,
 								"aria-haspopup": "menu"
-							}, [..._cache[11] || (_cache[11] = [createBaseVNode("svg", {
+							}, [..._cache[14] || (_cache[14] = [createBaseVNode("svg", {
 								xmlns: "http://www.w3.org/2000/svg",
 								class: "h-3.5 w-3.5",
 								fill: "none",
@@ -1293,7 +1452,7 @@ var _sfc_main$6 = {
 								"stroke-linejoin": "round",
 								"stroke-width": "2",
 								d: "M6 12h.01M12 12h.01M18 12h.01"
-							})], -1)])], 10, _hoisted_23$2),
+							})], -1)])], 10, _hoisted_25$2),
 							openActionMenuId.value === chat.id ? (openBlock(), createElementBlock("div", {
 								key: 0,
 								class: "sidebar-action-menu absolute right-0 top-7 z-30 rounded-lg shadow-lg border overflow-hidden min-w-[168px]",
@@ -1309,13 +1468,13 @@ var _sfc_main$6 = {
 									style: { "color": "var(--text-secondary)" },
 									onClick: withModifiers(($event) => togglePin(chat.id), ["stop"]),
 									role: "menuitem"
-								}, [pinnedIds.value.has(chat.id) ? (openBlock(), createElementBlock("svg", _hoisted_25$2, [..._cache[12] || (_cache[12] = [createBaseVNode("path", { d: "M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z" }, null, -1)])])) : (openBlock(), createElementBlock("svg", _hoisted_26$2, [..._cache[13] || (_cache[13] = [createBaseVNode("path", {
+								}, [pinnedIds.value.has(chat.id) ? (openBlock(), createElementBlock("svg", _hoisted_27$2, [..._cache[15] || (_cache[15] = [createBaseVNode("path", { d: "M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z" }, null, -1)])])) : (openBlock(), createElementBlock("svg", _hoisted_28$2, [..._cache[16] || (_cache[16] = [createBaseVNode("path", {
 									"stroke-linecap": "round",
 									"stroke-linejoin": "round",
 									"stroke-width": "2",
 									d: "M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"
-								}, null, -1)])])), createTextVNode(" " + toDisplayString(pinnedIds.value.has(chat.id) ? "取消釘選" : "釘選對話"), 1)], 8, _hoisted_24$2),
-								_cache[14] || (_cache[14] = createBaseVNode("div", {
+								}, null, -1)])])), createTextVNode(" " + toDisplayString(pinnedIds.value.has(chat.id) ? "取消釘選" : "釘選對話"), 1)], 8, _hoisted_26$2),
+								_cache[17] || (_cache[17] = createBaseVNode("div", {
 									class: "border-t",
 									style: { "border-color": "var(--border-primary)" }
 								}, null, -1)),
@@ -1324,13 +1483,13 @@ var _sfc_main$6 = {
 									style: { "color": "var(--text-secondary)" },
 									onClick: withModifiers(($event) => handleExportClick(chat.id, "markdown"), ["stop"]),
 									role: "menuitem"
-								}, " 匯出為 Markdown ", 8, _hoisted_27$2),
+								}, " 匯出為 Markdown ", 8, _hoisted_29$2),
 								createBaseVNode("button", {
 									class: "w-full text-left px-3 py-2 text-xs transition-colors",
 									style: { "color": "var(--text-secondary)" },
 									onClick: withModifiers(($event) => handleExportClick(chat.id, "json"), ["stop"]),
 									role: "menuitem"
-								}, " 匯出為 JSON ", 8, _hoisted_28$1)
+								}, " 匯出為 JSON ", 8, _hoisted_30$1)
 							])) : createCommentVNode("", true),
 							createBaseVNode("button", {
 								onClick: withModifiers(($event) => handleDeleteClick(chat.id), ["stop"]),
@@ -1341,7 +1500,7 @@ var _sfc_main$6 = {
 								]),
 								title: pendingDeleteId.value === chat.id ? `再按一次刪除：${chat.title}` : `刪除對話：${chat.title}`,
 								"aria-label": pendingDeleteId.value === chat.id ? `再按一次刪除：${chat.title}` : `刪除對話：${chat.title}`
-							}, [..._cache[15] || (_cache[15] = [createBaseVNode("svg", {
+							}, [..._cache[18] || (_cache[18] = [createBaseVNode("svg", {
 								xmlns: "http://www.w3.org/2000/svg",
 								class: "h-3.5 w-3.5",
 								fill: "none",
@@ -1352,56 +1511,60 @@ var _sfc_main$6 = {
 								"stroke-linejoin": "round",
 								"stroke-width": "2",
 								d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-							})], -1)])], 10, _hoisted_29$1)
-						])], 42, _hoisted_14$3);
+							})], -1)])], 10, _hoisted_31)
+						])], 42, _hoisted_16$4);
 					}), 128))], 64);
 				}), 128))]),
-				_cache[16] || (_cache[16] = createBaseVNode("div", {
+				_cache[19] || (_cache[19] = createBaseVNode("div", {
 					class: "p-3 border-t",
 					style: { "border-color": "var(--border-primary)" }
 				}, [createBaseVNode("div", {
 					class: "flex items-center gap-2 text-[10px]",
 					style: { "color": "var(--text-tertiary)" }
 				}, [createBaseVNode("span", null, "Server Assistant v1.0")])], -1))
-			], 10, _hoisted_1$6);
+			], 10, _hoisted_1$7);
 		};
 	}
 };
-var Sidebar_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$6, [["__scopeId", "data-v-1f5cdb05"]]);
+var Sidebar_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$7, [["__scopeId", "data-v-0410253c"]]);
 
 //#endregion
 //#region src/components/ChatHeader.vue
-var _hoisted_1$5 = {
+var _hoisted_1$6 = {
 	class: "px-5 py-4 flex justify-between items-center border-b z-50",
 	style: {
 		"background-color": "var(--bg-primary)",
 		"border-color": "var(--border-primary)"
 	}
 };
-var _hoisted_2$5 = { class: "flex items-center gap-2" };
-var _hoisted_3$5 = { class: "flex items-center gap-2" };
-var _hoisted_4$4 = {
+var _hoisted_2$6 = { class: "flex items-center gap-2" };
+var _hoisted_3$6 = {
+	class: "text-lg font-semibold tracking-tight",
+	style: { "color": "var(--text-primary)" }
+};
+var _hoisted_4$6 = { class: "flex items-center gap-2" };
+var _hoisted_5$5 = {
 	class: "flex items-center gap-3 px-3 py-1.5 rounded-full border",
 	style: {
 		"background-color": "var(--bg-secondary)",
 		"border-color": "var(--border-primary)"
 	}
 };
-var _hoisted_5$3 = { class: "flex items-center gap-1.5" };
-var _hoisted_6$3 = { class: "relative flex h-2 w-2" };
-var _hoisted_7$3 = {
+var _hoisted_6$4 = { class: "flex items-center gap-1.5" };
+var _hoisted_7$4 = { class: "relative flex h-2 w-2" };
+var _hoisted_8$4 = {
 	key: 0,
 	class: "animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
 };
-var _hoisted_8$3 = {
+var _hoisted_9$4 = {
 	class: "text-[10px] uppercase font-bold tracking-widest",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_9$3 = {
+var _hoisted_10$4 = {
 	class: "text-xs font-mono cursor-default",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_10$3 = {
+var _hoisted_11$4 = {
 	key: 0,
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-4 w-4",
@@ -1410,7 +1573,7 @@ var _hoisted_10$3 = {
 	stroke: "currentColor",
 	style: { "color": "var(--accent-warning)" }
 };
-var _hoisted_11$3 = {
+var _hoisted_12$4 = {
 	key: 1,
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-4 w-4",
@@ -1419,7 +1582,7 @@ var _hoisted_11$3 = {
 	stroke: "currentColor",
 	style: { "color": "var(--accent-primary)" }
 };
-var _sfc_main$5 = {
+var _sfc_main$6 = {
 	__name: "ChatHeader",
 	props: {
 		ip: {
@@ -1435,11 +1598,12 @@ var _sfc_main$5 = {
 	setup(__props) {
 		const themeStore = useThemeStore();
 		return (_ctx, _cache) => {
-			return openBlock(), createElementBlock("header", _hoisted_1$5, [createBaseVNode("div", _hoisted_2$5, [
+			return openBlock(), createElementBlock("header", _hoisted_1$6, [createBaseVNode("div", _hoisted_2$6, [
 				createBaseVNode("button", {
 					onClick: _cache[0] || (_cache[0] = ($event) => _ctx.$emit("toggle-sidebar")),
 					class: "header-sidebar-toggle mr-1 p-2 rounded-lg transition-colors",
 					style: { "color": "var(--text-secondary)" },
+					title: "切換側邊欄",
 					"aria-label": "切換側邊欄"
 				}, [..._cache[2] || (_cache[2] = [createBaseVNode("svg", {
 					xmlns: "http://www.w3.org/2000/svg",
@@ -1453,19 +1617,16 @@ var _sfc_main$5 = {
 					"stroke-width": "2",
 					d: "M4 6h16M4 12h16M4 18h16"
 				})], -1)])]),
-				_cache[3] || (_cache[3] = createBaseVNode("h1", {
-					class: "text-lg font-semibold tracking-tight",
-					style: { "color": "var(--text-primary)" }
-				}, " CGV Lab Server Assistant ", -1)),
+				createBaseVNode("h1", _hoisted_3$6, toDisplayString(unref(APP_CONFIG).name), 1),
 				renderSlot(_ctx.$slots, "model-name", {}, void 0, true)
-			]), createBaseVNode("div", _hoisted_3$5, [
-				createBaseVNode("div", _hoisted_4$4, [
-					createBaseVNode("div", _hoisted_5$3, [createBaseVNode("span", _hoisted_6$3, [__props.isOnline ? (openBlock(), createElementBlock("span", _hoisted_7$3)) : createCommentVNode("", true), createBaseVNode("span", { class: normalizeClass(["relative inline-flex rounded-full h-2 w-2", __props.isOnline ? "bg-green-500" : "bg-red-500"]) }, null, 2)]), createBaseVNode("span", _hoisted_8$3, toDisplayString(__props.isOnline ? "Online" : "Offline"), 1)]),
-					_cache[4] || (_cache[4] = createBaseVNode("div", {
+			]), createBaseVNode("div", _hoisted_4$6, [
+				createBaseVNode("div", _hoisted_5$5, [
+					createBaseVNode("div", _hoisted_6$4, [createBaseVNode("span", _hoisted_7$4, [__props.isOnline ? (openBlock(), createElementBlock("span", _hoisted_8$4)) : createCommentVNode("", true), createBaseVNode("span", { class: normalizeClass(["relative inline-flex rounded-full h-2 w-2", __props.isOnline ? "bg-green-500" : "bg-red-500"]) }, null, 2)]), createBaseVNode("span", _hoisted_9$4, toDisplayString(__props.isOnline ? "連線中" : "離線"), 1)]),
+					_cache[3] || (_cache[3] = createBaseVNode("div", {
 						class: "w-px h-3",
 						style: { "background-color": "var(--border-primary)" }
 					}, null, -1)),
-					createBaseVNode("div", _hoisted_9$3, toDisplayString(__props.ip), 1)
+					createBaseVNode("div", _hoisted_10$4, toDisplayString(__props.ip), 1)
 				]),
 				createBaseVNode("button", {
 					onClick: _cache[1] || (_cache[1] = ($event) => unref(themeStore).toggleTheme()),
@@ -1476,12 +1637,12 @@ var _sfc_main$5 = {
 					},
 					title: "切換主題",
 					"aria-label": "切換主題"
-				}, [unref(themeStore).isDark ? (openBlock(), createElementBlock("svg", _hoisted_10$3, [..._cache[5] || (_cache[5] = [createBaseVNode("path", {
+				}, [unref(themeStore).isDark ? (openBlock(), createElementBlock("svg", _hoisted_11$4, [..._cache[4] || (_cache[4] = [createBaseVNode("path", {
 					"stroke-linecap": "round",
 					"stroke-linejoin": "round",
 					"stroke-width": "2",
 					d: "M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-				}, null, -1)])])) : (openBlock(), createElementBlock("svg", _hoisted_11$3, [..._cache[6] || (_cache[6] = [createBaseVNode("path", {
+				}, null, -1)])])) : (openBlock(), createElementBlock("svg", _hoisted_12$4, [..._cache[5] || (_cache[5] = [createBaseVNode("path", {
 					"stroke-linecap": "round",
 					"stroke-linejoin": "round",
 					"stroke-width": "2",
@@ -1492,63 +1653,57 @@ var _sfc_main$5 = {
 		};
 	}
 };
-var ChatHeader_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$5, [["__scopeId", "data-v-3b29591c"]]);
-
-//#endregion
-//#region src/config/app.config.js
-const UI_CONFIG = {
-	theme: "dark",
-	sidebarDefaultOpen: true,
-	messageAnimationDuration: 300,
-	scrollBehavior: "smooth",
-	messageWindowSize: 80,
-	messageWindowLoadChunk: 20,
-	markdownMaxRenderLength: 2e4
-};
-const CHAT_CONFIG = {
-	maxMessageLength: 8e3,
-	maxMessagesPerConversation: 20,
-	historyPageSize: 50,
-	streamingEnabled: true,
-	retryAttempts: 3,
-	retryDelay: 1e3
-};
-var DEFAULT_COMMAND_CONFIRM_TIMEOUT_SECONDS = 120;
-const COMMAND_CONFIG = { confirmTimeoutSeconds: DEFAULT_COMMAND_CONFIRM_TIMEOUT_SECONDS };
-const COMMAND_CONFIRM_TIMEOUT_SECONDS = Number.isInteger(COMMAND_CONFIG.confirmTimeoutSeconds) && COMMAND_CONFIG.confirmTimeoutSeconds > 0 ? COMMAND_CONFIG.confirmTimeoutSeconds : DEFAULT_COMMAND_CONFIRM_TIMEOUT_SECONDS;
+var ChatHeader_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$6, [["__scopeId", "data-v-93473873"]]);
 
 //#endregion
 //#region src/components/ChatCommandRequest.vue
-var _hoisted_1$4 = ["aria-label"];
-var _hoisted_2$4 = { key: 0 };
-var _hoisted_3$4 = { key: 1 };
-var _hoisted_4$3 = { key: 2 };
-var _hoisted_5$2 = { class: "cmd-summary-label" };
-var _hoisted_6$2 = { class: "cmd-summary-cmd" };
-var _hoisted_7$2 = ["aria-label"];
-var _hoisted_8$2 = { key: 0 };
-var _hoisted_9$2 = { key: 1 };
-var _hoisted_10$2 = { key: 2 };
-var _hoisted_11$2 = { key: 3 };
-var _hoisted_12$2 = { key: 4 };
-var _hoisted_13$2 = { key: 5 };
-var _hoisted_14$2 = { key: 6 };
-var _hoisted_15$2 = { key: 7 };
-var _hoisted_16$2 = {
-	key: 9,
+var _hoisted_1$5 = ["aria-label"];
+var _hoisted_2$5 = {
+	key: 0,
+	"aria-hidden": "true"
+};
+var _hoisted_3$5 = {
+	key: 1,
+	"aria-hidden": "true"
+};
+var _hoisted_4$5 = {
+	key: 2,
+	"aria-hidden": "true"
+};
+var _hoisted_5$4 = {
+	key: 3,
+	"aria-hidden": "true"
+};
+var _hoisted_6$3 = { class: "cmd-summary-label" };
+var _hoisted_7$3 = { class: "cmd-summary-cmd" };
+var _hoisted_8$3 = ["aria-label"];
+var _hoisted_9$3 = { key: 0 };
+var _hoisted_10$3 = {
+	key: 1,
+	class: "cmd-spinner",
+	xmlns: "http://www.w3.org/2000/svg",
+	viewBox: "0 0 24 24",
+	"aria-hidden": "true"
+};
+var _hoisted_11$3 = { key: 2 };
+var _hoisted_12$3 = { key: 3 };
+var _hoisted_13$3 = { key: 4 };
+var _hoisted_14$3 = { key: 5 };
+var _hoisted_15$3 = {
+	key: 7,
 	class: "cmd-collapse-indicator ml-auto",
 	"aria-hidden": "true"
 };
-var _hoisted_17$2 = {
+var _hoisted_16$3 = {
 	key: 0,
 	class: "mb-2 text-[11px] font-mono",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_18$2 = {
+var _hoisted_17$2 = {
 	key: 1,
-	class: "mb-2 text-[11px] font-mono",
-	style: { "color": "var(--text-tertiary)" }
+	class: "mb-2 text-xs cmd-executing-row"
 };
+var _hoisted_18$2 = { class: "cmd-inline-command" };
 var _hoisted_19$2 = {
 	key: 2,
 	class: "mb-2 text-[11px] font-mono",
@@ -1556,24 +1711,34 @@ var _hoisted_19$2 = {
 };
 var _hoisted_20$2 = {
 	key: 3,
-	class: "mb-2 text-xs",
-	style: { "color": "var(--text-secondary)" }
+	class: "mb-2 text-[11px] font-mono",
+	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_21$1 = {
+var _hoisted_21$2 = {
 	key: 4,
 	class: "mb-2 text-xs",
 	style: { "color": "var(--text-secondary)" }
 };
-var _hoisted_22$1 = {
+var _hoisted_22$2 = {
 	key: 5,
 	class: "mb-2 text-xs",
 	style: { "color": "var(--text-secondary)" }
 };
 var _hoisted_23$1 = {
+	key: 6,
+	class: "mb-2 text-xs",
+	style: { "color": "var(--text-secondary)" }
+};
+var _hoisted_24$1 = {
+	key: 7,
+	class: "mt-2 mb-3"
+};
+var _hoisted_25$1 = ["disabled"];
+var _hoisted_26$1 = {
 	class: "rounded-lg border overflow-hidden",
 	style: { borderColor: "var(--border-primary)" }
 };
-var _hoisted_24$1 = {
+var _hoisted_27$1 = {
 	class: "flex items-center justify-between px-3 py-1",
 	style: {
 		"background-color": "color-mix(in srgb, var(--code-bg) 85%, var(--text-tertiary) 15%)",
@@ -1581,15 +1746,16 @@ var _hoisted_24$1 = {
 		"min-height": "30px"
 	}
 };
-var _hoisted_25$1 = {
-	key: 6,
+var _hoisted_28$1 = {
+	key: 8,
 	class: "flex justify-end gap-2 mt-3"
 };
-var _hoisted_26$1 = ["disabled"];
-var _hoisted_27$1 = ["disabled"];
-var COUNTDOWN_WARN_THRESHOLD_SECONDS = 60;
-var COUNTDOWN_DANGER_THRESHOLD_SECONDS = 30;
-var _sfc_main$4 = {
+var _hoisted_29$1 = ["disabled"];
+var _hoisted_30 = ["disabled"];
+var COUNTDOWN_WARN_THRESHOLD_SECONDS = 300;
+var COUNTDOWN_DANGER_THRESHOLD_SECONDS = 120;
+var RESOLVE_FEEDBACK_VISIBLE_MS = 1800;
+var _sfc_main$5 = {
 	__name: "ChatCommandRequest",
 	props: {
 		command: {
@@ -1621,7 +1787,11 @@ var _sfc_main$4 = {
 			default: COMMAND_CONFIRM_TIMEOUT_SECONDS
 		}
 	},
-	emits: ["confirm", "cancel"],
+	emits: [
+		"confirm",
+		"cancel",
+		"resend-command"
+	],
 	setup(__props, { emit: __emit }) {
 		const DEFAULT_TTL_SECONDS = COMMAND_CONFIRM_TIMEOUT_SECONDS;
 		const EXPIRES_AT_FORMATTER = new Intl.DateTimeFormat("zh-TW", {
@@ -1635,13 +1805,15 @@ var _sfc_main$4 = {
 		const props = __props;
 		const emit = __emit;
 		const isPending = computed(() => props.status === "pending");
+		const isExecuting = computed(() => props.status === "executing");
 		const isConfirmed = computed(() => props.status === "confirmed");
+		const isFailed = computed(() => props.status === "failed");
 		const isCancelled = computed(() => props.status === "cancelled");
-		const isExpired = computed(() => isPending.value && remainingSeconds.value <= 0);
-		const isResolved = computed(() => isConfirmed.value || isCancelled.value || isExpired.value);
-		const collapsed = ref(props.status === "confirmed" || props.status === "cancelled" || isInitiallyExpired(props));
+		const isExpired = computed(() => props.status === "expired" || isPending.value && remainingSeconds.value <= 0);
+		const isResolved = computed(() => isConfirmed.value || isFailed.value || isCancelled.value || isExpired.value);
+		const collapsed = ref(props.status === "confirmed" || props.status === "failed" || props.status === "cancelled");
 		const summaryRef = ref(null);
-		const resolvedAt = ref(null);
+		const resolvedAtLabel = ref(null);
 		const resolvedAtIsCreatedFallback = ref(false);
 		const copied = ref(false);
 		const copyFailed = ref(false);
@@ -1672,11 +1844,13 @@ var _sfc_main$4 = {
 			clearInterval(countdownInterval);
 			countdownInterval = null;
 		}
+		function clearCollapseTimer() {
+			if (!collapseTimer) return;
+			clearTimeout(collapseTimer);
+			collapseTimer = null;
+		}
 		function scheduleCollapse(delayMs = 0) {
-			if (collapseTimer) {
-				clearTimeout(collapseTimer);
-				collapseTimer = null;
-			}
+			clearCollapseTimer();
 			collapseTimer = setTimeout(() => {
 				collapsed.value = true;
 				collapseTimer = null;
@@ -1699,10 +1873,7 @@ var _sfc_main$4 = {
 		}
 		onUnmounted(() => {
 			stopCountdown();
-			if (collapseTimer) {
-				clearTimeout(collapseTimer);
-				collapseTimer = null;
-			}
+			clearCollapseTimer();
 		});
 		watch(() => [
 			props.status,
@@ -1732,40 +1903,63 @@ var _sfc_main$4 = {
 			const [newStatus, newResolvedAt, newCreatedAt] = next;
 			const oldStatus = Array.isArray(previous) ? previous[0] : null;
 			if (newStatus !== "pending") stopCountdown();
-			if (newStatus === "confirmed" || newStatus === "cancelled") {
+			if (newStatus === "confirmed" || newStatus === "cancelled" || newStatus === "failed") {
 				if (Number.isFinite(newResolvedAt)) {
-					resolvedAt.value = RESOLVED_AT_FORMATTER.format(new Date(newResolvedAt));
+					resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(new Date(newResolvedAt));
 					resolvedAtIsCreatedFallback.value = false;
 				} else if (Number.isFinite(newCreatedAt)) {
-					resolvedAt.value = RESOLVED_AT_FORMATTER.format(new Date(newCreatedAt));
+					resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(new Date(newCreatedAt));
 					resolvedAtIsCreatedFallback.value = true;
-				} else if (!resolvedAt.value) {
-					resolvedAt.value = RESOLVED_AT_FORMATTER.format(/* @__PURE__ */ new Date());
+				} else if (!resolvedAtLabel.value) {
+					resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(/* @__PURE__ */ new Date());
 					resolvedAtIsCreatedFallback.value = false;
 				}
-				if (oldStatus === "pending") scheduleCollapse(1800);
+				if (oldStatus === "pending" || oldStatus === "executing") scheduleCollapse(RESOLVE_FEEDBACK_VISIBLE_MS);
 				return;
 			}
-			if (newStatus === "pending" && !isExpired.value) resolvedAt.value = null;
+			if (newStatus === "expired") {
+				resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(new Date(hasDeadline.value ? deadlineMs.value : Date.now()));
+				resolvedAtIsCreatedFallback.value = false;
+				clearCollapseTimer();
+				collapsed.value = false;
+				return;
+			}
+			if (newStatus === "executing") {
+				clearCollapseTimer();
+				collapsed.value = false;
+				return;
+			}
+			if (newStatus === "pending" && !isExpired.value) {
+				resolvedAtLabel.value = null;
+				clearCollapseTimer();
+				collapsed.value = false;
+			}
 			resolvedAtIsCreatedFallback.value = false;
 		}, { immediate: true });
 		watch(isExpired, (expired) => {
 			if (!expired) return;
-			resolvedAt.value = RESOLVED_AT_FORMATTER.format(new Date(hasDeadline.value ? deadlineMs.value : Date.now()));
+			resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(new Date(hasDeadline.value ? deadlineMs.value : Date.now()));
 			resolvedAtIsCreatedFallback.value = false;
-			scheduleCollapse(0);
+			clearCollapseTimer();
 		}, { immediate: true });
 		const resolvedTimestampLabel = computed(() => {
 			if (isExpired.value) return "逾時時間";
 			if (resolvedAtIsCreatedFallback.value) return "建立時間";
-			return isConfirmed.value ? "執行時間" : "取消時間";
+			if (isConfirmed.value) return "完成時間";
+			if (isFailed.value) return "失敗時間";
+			return "取消時間";
 		});
 		const createdAtLabel = computed(() => {
 			if (!Number.isFinite(props.createdAt)) return "";
 			return RESOLVED_AT_FORMATTER.format(new Date(props.createdAt));
 		});
-		const showCountdown = computed(() => isPending.value && hasDeadline.value && remainingSeconds.value <= COUNTDOWN_WARN_THRESHOLD_SECONDS);
-		const countdownDanger = computed(() => remainingSeconds.value <= COUNTDOWN_DANGER_THRESHOLD_SECONDS);
+		const showCountdown = computed(() => isPending.value && hasDeadline.value && remainingSeconds.value > 0 && remainingSeconds.value < COUNTDOWN_DANGER_THRESHOLD_SECONDS);
+		const countdownLevel = computed(() => {
+			if (remainingSeconds.value <= COUNTDOWN_DANGER_THRESHOLD_SECONDS) return "danger";
+			if (remainingSeconds.value <= COUNTDOWN_WARN_THRESHOLD_SECONDS) return "warn";
+			return "safe";
+		});
+		const countdownClass = computed(() => `countdown-${countdownLevel.value}`);
 		const expiresAtLabel = computed(() => {
 			if (!hasDeadline.value) return "";
 			return EXPIRES_AT_FORMATTER.format(new Date(deadlineMs.value));
@@ -1806,6 +2000,65 @@ var _sfc_main$4 = {
 			const first = words[0].toLowerCase();
 			return RISK_REASONS[first === "sudo" ? (words[1] || "").toLowerCase() : first] || null;
 		});
+		const cardAccent = computed(() => {
+			if (isFailed.value || isExpired.value) return "var(--accent-danger)";
+			if (isPending.value) return "var(--accent-warning)";
+			if (isExecuting.value) return "var(--accent-primary)";
+			if (isConfirmed.value) return "var(--accent-success)";
+			return "var(--border-secondary)";
+		});
+		const statusTone = computed(() => {
+			if (isFailed.value || isExpired.value) return "var(--accent-danger)";
+			if (isPending.value) return "var(--accent-warning)";
+			if (isExecuting.value) return "var(--accent-primary)";
+			if (isConfirmed.value) return "var(--accent-success)";
+			return "var(--text-tertiary)";
+		});
+		const statusLabel = computed(() => {
+			if (isExpired.value) return "已逾時";
+			if (isExecuting.value) return "執行中";
+			if (isPending.value) return "待確認";
+			if (isConfirmed.value) return "已完成";
+			if (isFailed.value) return "失敗";
+			return "已取消";
+		});
+		const headerTitle = computed(() => {
+			if (isExpired.value) return "確認已逾時";
+			if (isExecuting.value) return "指令執行中";
+			if (isPending.value) return "系統變更確認";
+			if (isConfirmed.value) return "指令執行成功";
+			if (isFailed.value) return "指令執行失敗";
+			return "操作已取消";
+		});
+		const badgeClass = computed(() => {
+			if (isExpired.value) return "badge-expired";
+			if (isExecuting.value) return "badge-executing";
+			if (isPending.value) return "badge-pending";
+			if (isConfirmed.value) return "badge-confirmed";
+			if (isFailed.value) return "badge-failed";
+			return "badge-cancelled";
+		});
+		const summaryAriaLabel = computed(() => {
+			if (isConfirmed.value) return "指令已完成，點擊展開詳情";
+			if (isFailed.value) return "指令執行失敗，點擊展開詳情";
+			if (isExpired.value) return "確認已逾時，點擊展開詳情";
+			return "操作已取消，點擊展開詳情";
+		});
+		const groupAriaLabel = computed(() => {
+			if (isExpired.value) return "確認已逾時";
+			if (isExecuting.value) return "指令執行中";
+			if (isPending.value) return "高風險指令確認";
+			if (isConfirmed.value) return "指令已確認執行";
+			if (isFailed.value) return "指令執行失敗";
+			return "操作已取消";
+		});
+		const commandTextColor = computed(() => {
+			if (isFailed.value || isExpired.value) return "var(--accent-danger)";
+			if (isPending.value) return "var(--accent-warning)";
+			if (isExecuting.value) return "var(--accent-primary)";
+			if (isConfirmed.value) return "var(--accent-success)";
+			return "var(--text-tertiary)";
+		});
 		async function copyCommand() {
 			try {
 				if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(props.command);
@@ -1821,18 +2074,21 @@ var _sfc_main$4 = {
 				copied.value = true;
 				setTimeout(() => {
 					copied.value = false;
-				}, 2e3);
+				}, 3e3);
 			} catch {
 				copyFailed.value = true;
 				setTimeout(() => {
 					copyFailed.value = false;
-				}, 2e3);
+				}, 3e3);
 			}
 		}
 		function collapseDetails() {
 			if (!isResolved.value) return;
 			collapsed.value = true;
 			nextTick(() => summaryRef.value?.focus());
+		}
+		function resendCommand() {
+			emit("resend-command", props.command);
 		}
 		return (_ctx, _cache) => {
 			return openBlock(), createElementBlock(Fragment, null, [createVNode(Transition, { name: "cmd-collapse" }, {
@@ -1843,14 +2099,14 @@ var _sfc_main$4 = {
 					type: "button",
 					onClick: _cache[0] || (_cache[0] = ($event) => collapsed.value = false),
 					class: "cmd-summary-row",
-					style: normalizeStyle({ borderColor: isConfirmed.value ? "var(--accent-success)" : isExpired.value ? "var(--accent-danger)" : "var(--border-secondary)" }),
-					"aria-label": isConfirmed.value ? "指令已執行，點擊展開詳情" : isExpired.value ? "確認已逾時，點擊展開詳情" : "操作已取消，點擊展開詳情"
+					style: normalizeStyle({ borderColor: cardAccent.value }),
+					"aria-label": summaryAriaLabel.value
 				}, [
 					createBaseVNode("span", {
 						class: "cmd-summary-status",
-						style: normalizeStyle({ color: isConfirmed.value ? "var(--accent-success)" : isExpired.value ? "var(--accent-danger)" : "var(--text-tertiary)" })
-					}, [isConfirmed.value ? (openBlock(), createElementBlock("span", _hoisted_2$4, "✅")) : isExpired.value ? (openBlock(), createElementBlock("span", _hoisted_3$4, "⏰")) : (openBlock(), createElementBlock("span", _hoisted_4$3, "🚫")), createBaseVNode("span", _hoisted_5$2, toDisplayString(isConfirmed.value ? "已執行" : isExpired.value ? "已逾時" : "已取消"), 1)], 4),
-					createBaseVNode("code", _hoisted_6$2, toDisplayString(__props.command), 1),
+						style: normalizeStyle({ color: statusTone.value })
+					}, [isConfirmed.value ? (openBlock(), createElementBlock("span", _hoisted_2$5, "✅")) : isFailed.value ? (openBlock(), createElementBlock("span", _hoisted_3$5, "❌")) : isExpired.value ? (openBlock(), createElementBlock("span", _hoisted_4$5, "⏰")) : (openBlock(), createElementBlock("span", _hoisted_5$4, "🚫")), createBaseVNode("span", _hoisted_6$3, toDisplayString(isConfirmed.value ? "已完成" : isFailed.value ? "失敗" : isExpired.value ? "已逾時" : "已取消"), 1)], 4),
+					createBaseVNode("code", _hoisted_7$3, toDisplayString(__props.command), 1),
 					_cache[3] || (_cache[3] = createBaseVNode("svg", {
 						class: "cmd-summary-chevron",
 						xmlns: "http://www.w3.org/2000/svg",
@@ -1863,17 +2119,17 @@ var _sfc_main$4 = {
 						"stroke-linecap": "round",
 						"stroke-linejoin": "round"
 					}, [createBaseVNode("polyline", { points: "6 9 12 15 18 9" })], -1))
-				], 12, _hoisted_1$4)) : createCommentVNode("", true)]),
+				], 12, _hoisted_1$5)) : createCommentVNode("", true)]),
 				_: 1
 			}), createVNode(Transition, { name: "cmd-card" }, {
 				default: withCtx(() => [!collapsed.value ? (openBlock(), createElementBlock("div", {
 					key: 0,
 					role: "group",
-					"aria-label": isExpired.value ? "確認已逾時" : isPending.value ? "高風險指令確認" : isConfirmed.value ? "指令已確認執行" : "操作已取消",
+					"aria-label": groupAriaLabel.value,
 					class: "rounded-xl p-3 border transition-all",
 					style: normalizeStyle({
 						backgroundColor: "var(--bg-input)",
-						borderColor: isExpired.value ? "var(--accent-danger)" : isPending.value ? "var(--accent-warning)" : isConfirmed.value ? "var(--accent-success)" : "var(--border-secondary)"
+						borderColor: cardAccent.value
 					})
 				}, [
 					(openBlock(), createBlock(resolveDynamicComponent(isResolved.value ? "button" : "div"), {
@@ -1882,18 +2138,27 @@ var _sfc_main$4 = {
 						"aria-label": isResolved.value ? "收合詳情" : void 0,
 						role: isResolved.value ? void 0 : "status",
 						"aria-live": isResolved.value ? void 0 : "polite",
-						style: normalizeStyle({ color: isExpired.value ? "var(--accent-danger)" : isPending.value ? "var(--accent-warning)" : isConfirmed.value ? "var(--accent-success)" : "var(--text-tertiary)" }),
+						style: normalizeStyle({ color: statusTone.value }),
 						onClick: collapseDetails
 					}, {
 						default: withCtx(() => [
-							isExpired.value ? (openBlock(), createElementBlock("span", _hoisted_8$2, "⏰")) : isPending.value ? (openBlock(), createElementBlock("span", _hoisted_9$2, "⚠️")) : isConfirmed.value ? (openBlock(), createElementBlock("span", _hoisted_10$2, "✅")) : (openBlock(), createElementBlock("span", _hoisted_11$2, "🚫")),
-							isExpired.value ? (openBlock(), createElementBlock("span", _hoisted_12$2, "確認已逾時")) : isPending.value ? (openBlock(), createElementBlock("span", _hoisted_13$2, "系統變更確認")) : isConfirmed.value ? (openBlock(), createElementBlock("span", _hoisted_14$2, "指令已確認執行")) : (openBlock(), createElementBlock("span", _hoisted_15$2, "操作已取消")),
+							isExpired.value ? (openBlock(), createElementBlock("span", _hoisted_9$3, "⏰")) : isExecuting.value ? (openBlock(), createElementBlock("svg", _hoisted_10$3, [..._cache[4] || (_cache[4] = [createBaseVNode("circle", {
+								class: "cmd-spinner-track",
+								cx: "12",
+								cy: "12",
+								r: "9"
+							}, null, -1), createBaseVNode("path", {
+								class: "cmd-spinner-indicator",
+								d: "M21 12a9 9 0 0 0-9-9"
+							}, null, -1)])])) : isPending.value ? (openBlock(), createElementBlock("span", _hoisted_11$3, "⚠️")) : isConfirmed.value ? (openBlock(), createElementBlock("span", _hoisted_12$3, "✅")) : isFailed.value ? (openBlock(), createElementBlock("span", _hoisted_13$3, "❌")) : (openBlock(), createElementBlock("span", _hoisted_14$3, "🚫")),
+							createBaseVNode("span", null, toDisplayString(headerTitle.value), 1),
+							createBaseVNode("span", { class: normalizeClass(["cmd-status-badge", badgeClass.value]) }, toDisplayString(statusLabel.value), 3),
 							showCountdown.value && !isExpired.value ? (openBlock(), createElementBlock("span", {
-								key: 8,
-								class: normalizeClass(["ml-auto text-[11px] font-mono px-2 py-0.5 rounded-full countdown-pill", countdownDanger.value ? "countdown-danger" : "countdown-warn"]),
+								key: 6,
+								class: normalizeClass(["ml-auto text-[11px] font-mono px-2 py-0.5 rounded-full countdown-pill", countdownClass.value]),
 								"aria-live": "polite"
 							}, toDisplayString(formatRemaining(remainingSeconds.value)), 3)) : createCommentVNode("", true),
-							isResolved.value ? (openBlock(), createElementBlock("span", _hoisted_16$2, [..._cache[4] || (_cache[4] = [createBaseVNode("svg", {
+							isResolved.value ? (openBlock(), createElementBlock("span", _hoisted_15$3, [..._cache[5] || (_cache[5] = [createBaseVNode("svg", {
 								xmlns: "http://www.w3.org/2000/svg",
 								width: "12",
 								height: "12",
@@ -1914,13 +2179,20 @@ var _sfc_main$4 = {
 						"aria-live",
 						"style"
 					])),
-					isPending.value && hasDeadline.value ? (openBlock(), createElementBlock("div", _hoisted_17$2, " 剩餘時間：" + toDisplayString(remainingLabel.value) + " ｜ 到期時間：" + toDisplayString(expiresAtLabel.value), 1)) : createCommentVNode("", true),
-					(isConfirmed.value || isCancelled.value || isExpired.value) && resolvedAt.value ? (openBlock(), createElementBlock("div", _hoisted_18$2, toDisplayString(resolvedTimestampLabel.value) + "：" + toDisplayString(resolvedAt.value), 1)) : createCommentVNode("", true),
-					createdAtLabel.value && !resolvedAtIsCreatedFallback.value ? (openBlock(), createElementBlock("div", _hoisted_19$2, " 建立時間：" + toDisplayString(createdAtLabel.value), 1)) : createCommentVNode("", true),
-					isPending.value && !isExpired.value ? (openBlock(), createElementBlock("div", _hoisted_20$2, " AI 請求執行以下高風險指令： ")) : createCommentVNode("", true),
-					riskReason.value ? (openBlock(), createElementBlock("div", _hoisted_21$1, " 高風險說明：" + toDisplayString(riskReason.value), 1)) : createCommentVNode("", true),
-					isExpired.value ? (openBlock(), createElementBlock("div", _hoisted_22$1, " 確認視窗已過期，請重新發送指令。 ")) : createCommentVNode("", true),
-					createBaseVNode("div", _hoisted_23$1, [createBaseVNode("div", _hoisted_24$1, [_cache[6] || (_cache[6] = createBaseVNode("span", {
+					showCountdown.value ? (openBlock(), createElementBlock("div", _hoisted_16$3, " 剩餘時間：" + toDisplayString(remainingLabel.value) + " ｜ 到期時間：" + toDisplayString(expiresAtLabel.value), 1)) : createCommentVNode("", true),
+					isExecuting.value ? (openBlock(), createElementBlock("div", _hoisted_17$2, [_cache[6] || (_cache[6] = createTextVNode(" 正在執行：", -1)), createBaseVNode("code", _hoisted_18$2, toDisplayString(__props.command), 1)])) : createCommentVNode("", true),
+					(isConfirmed.value || isFailed.value || isCancelled.value || isExpired.value) && resolvedAtLabel.value ? (openBlock(), createElementBlock("div", _hoisted_19$2, toDisplayString(resolvedTimestampLabel.value) + "：" + toDisplayString(resolvedAtLabel.value), 1)) : createCommentVNode("", true),
+					createdAtLabel.value && !resolvedAtIsCreatedFallback.value ? (openBlock(), createElementBlock("div", _hoisted_20$2, " 建立時間：" + toDisplayString(createdAtLabel.value), 1)) : createCommentVNode("", true),
+					isPending.value && !isExpired.value ? (openBlock(), createElementBlock("div", _hoisted_21$2, " AI 請求執行以下高風險指令： ")) : createCommentVNode("", true),
+					riskReason.value ? (openBlock(), createElementBlock("div", _hoisted_22$2, " 高風險說明：" + toDisplayString(riskReason.value), 1)) : createCommentVNode("", true),
+					isExpired.value ? (openBlock(), createElementBlock("div", _hoisted_23$1, " 確認視窗已過期，請重新發送指令。 ")) : createCommentVNode("", true),
+					isExpired.value ? (openBlock(), createElementBlock("div", _hoisted_24$1, [createBaseVNode("button", {
+						type: "button",
+						class: "cmd-resend-btn",
+						disabled: __props.disabled,
+						onClick: resendCommand
+					}, toDisplayString(__props.disabled ? "處理中..." : "重新發送此指令"), 9, _hoisted_25$1)])) : createCommentVNode("", true),
+					createBaseVNode("div", _hoisted_26$1, [createBaseVNode("div", _hoisted_27$1, [_cache[8] || (_cache[8] = createBaseVNode("span", {
 						class: "text-[10px] font-semibold uppercase tracking-wide font-mono",
 						style: { "color": "var(--text-tertiary)" }
 					}, "shell", -1)), createBaseVNode("button", {
@@ -1931,7 +2203,7 @@ var _sfc_main$4 = {
 							"cmd-copy-btn-error": copyFailed.value
 						}]),
 						title: "複製指令"
-					}, [..._cache[5] || (_cache[5] = [createBaseVNode("svg", {
+					}, [..._cache[7] || (_cache[7] = [createBaseVNode("svg", {
 						xmlns: "http://www.w3.org/2000/svg",
 						width: "13",
 						height: "13",
@@ -1949,13 +2221,13 @@ var _sfc_main$4 = {
 						rx: "2",
 						ry: "2"
 					}), createBaseVNode("path", { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" })], -1)])], 2)]), createBaseVNode("pre", {
-						class: "p-3 overflow-x-auto text-sm font-mono m-0 border-0 rounded-none",
+						class: "p-3 overflow-x-auto whitespace-pre-wrap break-all text-sm font-mono m-0 border-0 rounded-none",
 						style: normalizeStyle({
 							backgroundColor: "var(--code-bg)",
-							color: isPending.value ? "var(--accent-warning)" : isConfirmed.value ? "var(--accent-success)" : "var(--text-tertiary)"
+							color: commandTextColor.value
 						})
 					}, [createBaseVNode("code", null, toDisplayString(__props.command), 1)], 4)]),
-					isPending.value && !isExpired.value ? (openBlock(), createElementBlock("div", _hoisted_25$1, [createBaseVNode("button", {
+					isPending.value && !isExpired.value ? (openBlock(), createElementBlock("div", _hoisted_28$1, [createBaseVNode("button", {
 						onClick: _cache[1] || (_cache[1] = ($event) => emit("cancel")),
 						disabled: __props.disabled,
 						class: "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
@@ -1966,7 +2238,7 @@ var _sfc_main$4 = {
 							opacity: __props.disabled ? .5 : 1,
 							cursor: __props.disabled ? "not-allowed" : "pointer"
 						})
-					}, " 取消 ", 12, _hoisted_26$1), createBaseVNode("button", {
+					}, " 取消 ", 12, _hoisted_29$1), createBaseVNode("button", {
 						onClick: _cache[2] || (_cache[2] = ($event) => emit("confirm", __props.command)),
 						disabled: __props.disabled,
 						class: "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
@@ -1976,14 +2248,479 @@ var _sfc_main$4 = {
 							opacity: __props.disabled ? .5 : 1,
 							cursor: __props.disabled ? "not-allowed" : "pointer"
 						})
-					}, toDisplayString(__props.disabled ? "處理中..." : "確認執行"), 13, _hoisted_27$1)])) : createCommentVNode("", true)
-				], 12, _hoisted_7$2)) : createCommentVNode("", true)]),
+					}, toDisplayString(__props.disabled ? "處理中..." : "確認執行"), 13, _hoisted_30)])) : createCommentVNode("", true)
+				], 12, _hoisted_8$3)) : createCommentVNode("", true)]),
 				_: 1
 			})], 64);
 		};
 	}
 };
-var ChatCommandRequest_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$4, [["__scopeId", "data-v-99edf62c"]]);
+var ChatCommandRequest_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$5, [["__scopeId", "data-v-6c8b149c"]]);
+
+//#endregion
+//#region src/components/MessageItem.vue
+var _hoisted_1$4 = ["data-msg-key"];
+var _hoisted_2$4 = {
+	key: 0,
+	class: "text-xs font-bold text-white"
+};
+var _hoisted_3$4 = {
+	key: 1,
+	class: "text-xs font-bold text-white"
+};
+var _hoisted_4$4 = {
+	class: "text-[11px] mb-1.5 flex justify-between items-center gap-4 font-medium tracking-wide",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_5$3 = { class: "flex items-center gap-1.5" };
+var _hoisted_6$2 = {
+	key: 0,
+	class: "text-[10px] px-1.5 py-0.5 rounded font-mono",
+	style: {
+		"background-color": "color-mix(in srgb, var(--accent-primary) 12%, transparent)",
+		"color": "var(--text-tertiary)"
+	}
+};
+var _hoisted_7$2 = { class: "message-inline-actions" };
+var _hoisted_8$2 = ["innerHTML"];
+var _hoisted_9$2 = {
+	key: 0,
+	class: "message-fade-mask"
+};
+var _hoisted_10$2 = {
+	key: 0,
+	class: "mt-1"
+};
+var _hoisted_11$2 = {
+	key: 1,
+	class: "mt-3"
+};
+var _hoisted_12$2 = {
+	key: 2,
+	class: "msg-aborted-banner"
+};
+var _hoisted_13$2 = {
+	key: 3,
+	class: "error-action-bar"
+};
+var _hoisted_14$2 = {
+	key: 4,
+	class: "error-action-bar"
+};
+var _hoisted_15$2 = {
+	key: 0,
+	class: "error-countdown"
+};
+var _hoisted_16$2 = ["disabled"];
+var _sfc_main$4 = {
+	__name: "MessageItem",
+	props: {
+		entry: {
+			type: Object,
+			required: true
+		},
+		isProcessing: {
+			type: Boolean,
+			default: false
+		},
+		isTouchDevice: {
+			type: Boolean,
+			default: false
+		},
+		canRegenerateMessage: {
+			type: Function,
+			default: null
+		},
+		collapsedLines: {
+			type: Number,
+			default: 18
+		},
+		isExpanded: {
+			type: Boolean,
+			default: false
+		},
+		renderedHtml: {
+			type: String,
+			default: ""
+		},
+		shouldCollapse: {
+			type: Boolean,
+			default: false
+		},
+		availableModels: {
+			type: Object,
+			default: () => ({})
+		}
+	},
+	emits: [
+		"command-action",
+		"edit-message",
+		"regenerate-message",
+		"toggle-expand",
+		"touch-start",
+		"touch-move",
+		"touch-end",
+		"copy",
+		"switch-model"
+	],
+	setup(__props, { emit: __emit }) {
+		const props = __props;
+		const emit = __emit;
+		const msg = computed(() => props.entry.msg);
+		const messageKey = computed(() => props.entry.messageKey);
+		const absoluteIndex = computed(() => props.entry.absoluteIndex);
+		const shouldShowEditAction = computed(() => msg.value?.role === "user" && !props.isProcessing);
+		const modelLabel = computed(() => {
+			const key = msg.value?.modelKey;
+			if (!key || msg.value?.role !== "ai") return "";
+			return props.availableModels[key]?.label || key;
+		});
+		const shouldShowRegenerateAction = computed(() => {
+			if (msg.value?.role !== "ai" || props.isProcessing) return false;
+			if (typeof props.canRegenerateMessage === "function") return Boolean(props.canRegenerateMessage(absoluteIndex.value));
+			return true;
+		});
+		const countdownSec = ref(0);
+		let countdownTimer = null;
+		const startCountdown = () => {
+			const retryableAt = msg.value?.retryableAt;
+			if (!retryableAt) return;
+			const update = () => {
+				countdownSec.value = Math.max(0, Math.ceil((retryableAt - Date.now()) / 1e3));
+			};
+			update();
+			if (countdownSec.value > 0) countdownTimer = setInterval(() => {
+				update();
+				if (countdownSec.value <= 0) {
+					clearInterval(countdownTimer);
+					countdownTimer = null;
+				}
+			}, 1e3);
+		};
+		onMounted(() => {
+			if (msg.value?.retryableAt) startCountdown();
+		});
+		onBeforeUnmount(() => {
+			if (countdownTimer) {
+				clearInterval(countdownTimer);
+				countdownTimer = null;
+			}
+		});
+		return (_ctx, _cache) => {
+			return openBlock(), createElementBlock("div", {
+				"data-msg-key": messageKey.value,
+				class: normalizeClass(["flex gap-3 items-start group", msg.value.role === "user" ? "flex-row-reverse" : "flex-row"])
+			}, [
+				createBaseVNode("div", { class: normalizeClass(["flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden select-none shadow-sm", msg.value.role === "user" ? "bg-gradient-to-br from-indigo-500 to-purple-600" : "bg-gradient-to-br from-emerald-500 to-teal-600"]) }, [msg.value.role === "user" ? (openBlock(), createElementBlock("span", _hoisted_2$4, "U")) : (openBlock(), createElementBlock("span", _hoisted_3$4, "AI"))], 2),
+				createBaseVNode("div", {
+					class: "max-w-[85%] min-w-0 rounded-2xl p-4 shadow-sm transition-all duration-200",
+					onTouchstartPassive: _cache[12] || (_cache[12] = ($event) => emit("touch-start", $event, msg.value.content)),
+					onTouchmovePassive: _cache[13] || (_cache[13] = ($event) => emit("touch-move", $event)),
+					onTouchend: _cache[14] || (_cache[14] = ($event) => emit("touch-end")),
+					onTouchcancel: _cache[15] || (_cache[15] = ($event) => emit("touch-end")),
+					style: normalizeStyle(msg.value.role === "user" ? {
+						backgroundColor: "var(--user-bubble)",
+						color: "var(--text-primary)"
+					} : {
+						backgroundColor: "var(--ai-bubble)",
+						border: "1px solid var(--border-primary)"
+					})
+				}, [
+					createBaseVNode("div", _hoisted_4$4, [createBaseVNode("span", _hoisted_5$3, [createTextVNode(toDisplayString(msg.value.role === "user" ? "User" : "AI Assistant") + " ", 1), modelLabel.value ? (openBlock(), createElementBlock("span", _hoisted_6$2, toDisplayString(modelLabel.value), 1)) : createCommentVNode("", true)]), createBaseVNode("div", _hoisted_7$2, [shouldShowEditAction.value ? (openBlock(), createElementBlock("button", {
+						key: 0,
+						type: "button",
+						class: "message-inline-action-btn",
+						title: "編輯訊息",
+						"aria-label": "編輯訊息",
+						onClick: _cache[0] || (_cache[0] = ($event) => emit("edit-message", absoluteIndex.value))
+					}, " 編輯 ")) : createCommentVNode("", true), shouldShowRegenerateAction.value ? (openBlock(), createElementBlock("button", {
+						key: 1,
+						type: "button",
+						class: "message-inline-action-btn",
+						title: "重新生成回覆",
+						"aria-label": "重新生成回覆",
+						onClick: _cache[1] || (_cache[1] = ($event) => emit("regenerate-message", absoluteIndex.value))
+					}, " 重新生成 ")) : createCommentVNode("", true)])]),
+					createBaseVNode("div", {
+						class: normalizeClass(["message-content-shell", { "message-content-collapsed": __props.shouldCollapse && !__props.isExpanded }]),
+						style: normalizeStyle({ "--collapsed-lines": String(__props.collapsedLines) })
+					}, [createBaseVNode("div", {
+						class: "markdown-content leading-7 text-[15px]",
+						style: { "color": "var(--text-primary)" },
+						innerHTML: __props.renderedHtml
+					}, null, 8, _hoisted_8$2), __props.shouldCollapse && !__props.isExpanded ? (openBlock(), createElementBlock("div", _hoisted_9$2)) : createCommentVNode("", true)], 6),
+					__props.shouldCollapse ? (openBlock(), createElementBlock("div", _hoisted_10$2, [createBaseVNode("button", {
+						type: "button",
+						class: "message-expand-btn",
+						onClick: _cache[2] || (_cache[2] = ($event) => emit("toggle-expand", messageKey.value))
+					}, [(openBlock(), createElementBlock("svg", {
+						class: normalizeClass(["message-expand-icon", { "message-expand-icon-open": __props.isExpanded }]),
+						viewBox: "0 0 16 16",
+						fill: "currentColor"
+					}, [..._cache[17] || (_cache[17] = [createBaseVNode("path", { d: "M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z" }, null, -1)])], 2)), createBaseVNode("span", null, toDisplayString(__props.isExpanded ? "收合" : "展開完整輸出"), 1)])])) : createCommentVNode("", true),
+					msg.value.command ? (openBlock(), createElementBlock("div", _hoisted_11$2, [createVNode(ChatCommandRequest_default, {
+						command: msg.value.command.content,
+						status: msg.value.command.status,
+						disabled: Boolean(msg.value.command.inFlight) || __props.isProcessing,
+						"created-at": msg.value.command.createdAt,
+						"resolved-at": msg.value.command.resolvedAt,
+						"expires-at": msg.value.command.timeoutAt,
+						"ttl-seconds": unref(COMMAND_CONFIRM_TIMEOUT_SECONDS),
+						onConfirm: _cache[3] || (_cache[3] = ($event) => emit("command-action", msg.value, "confirm")),
+						onCancel: _cache[4] || (_cache[4] = ($event) => emit("command-action", msg.value, "cancel")),
+						onResendCommand: _cache[5] || (_cache[5] = ($event) => emit("command-action", msg.value, "resend"))
+					}, null, 8, [
+						"command",
+						"status",
+						"disabled",
+						"created-at",
+						"resolved-at",
+						"expires-at",
+						"ttl-seconds"
+					])])) : createCommentVNode("", true),
+					msg.value.aborted ? (openBlock(), createElementBlock("div", _hoisted_12$2, [..._cache[18] || (_cache[18] = [createBaseVNode("svg", {
+						xmlns: "http://www.w3.org/2000/svg",
+						width: "12",
+						height: "12",
+						viewBox: "0 0 24 24",
+						fill: "none",
+						stroke: "currentColor",
+						"stroke-width": "2.5",
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round"
+					}, [
+						createBaseVNode("circle", {
+							cx: "12",
+							cy: "12",
+							r: "10"
+						}),
+						createBaseVNode("line", {
+							x1: "15",
+							y1: "9",
+							x2: "9",
+							y2: "15"
+						}),
+						createBaseVNode("line", {
+							x1: "9",
+							y1: "9",
+							x2: "15",
+							y2: "15"
+						})
+					], -1), createTextVNode(" 已中斷回應 ", -1)])])) : createCommentVNode("", true),
+					msg.value.emptyResponse && !__props.isProcessing ? (openBlock(), createElementBlock("div", _hoisted_13$2, [createBaseVNode("button", {
+						type: "button",
+						class: "empty-response-retry-btn",
+						onClick: _cache[6] || (_cache[6] = ($event) => emit("regenerate-message", absoluteIndex.value))
+					}, [..._cache[19] || (_cache[19] = [createBaseVNode("svg", {
+						xmlns: "http://www.w3.org/2000/svg",
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "none",
+						stroke: "currentColor",
+						"stroke-width": "2",
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round"
+					}, [createBaseVNode("polyline", { points: "23 4 23 10 17 10" }), createBaseVNode("path", { d: "M20.49 15a9 9 0 1 1-2.12-9.36L23 10" })], -1), createTextVNode(" 重試 ", -1)])]), createBaseVNode("button", {
+						type: "button",
+						class: "error-switch-model-btn",
+						onClick: _cache[7] || (_cache[7] = ($event) => emit("switch-model"))
+					}, [..._cache[20] || (_cache[20] = [createBaseVNode("svg", {
+						xmlns: "http://www.w3.org/2000/svg",
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "none",
+						stroke: "currentColor",
+						"stroke-width": "2",
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round"
+					}, [createBaseVNode("path", { d: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" })], -1), createTextVNode(" 切換模型 ", -1)])])])) : msg.value.errorType && msg.value.errorType !== "emptyResponse" && msg.value.errorType !== "concurrentStream" && !__props.isProcessing ? (openBlock(), createElementBlock("div", _hoisted_14$2, [msg.value.errorType === "rateLimit" ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [countdownSec.value > 0 ? (openBlock(), createElementBlock("span", _hoisted_15$2, toDisplayString(countdownSec.value) + " 秒後可重試 ", 1)) : createCommentVNode("", true), createBaseVNode("button", {
+						type: "button",
+						class: "empty-response-retry-btn",
+						disabled: countdownSec.value > 0,
+						onClick: _cache[8] || (_cache[8] = ($event) => emit("regenerate-message", absoluteIndex.value))
+					}, [..._cache[21] || (_cache[21] = [createBaseVNode("svg", {
+						xmlns: "http://www.w3.org/2000/svg",
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "none",
+						stroke: "currentColor",
+						"stroke-width": "2",
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round"
+					}, [createBaseVNode("polyline", { points: "23 4 23 10 17 10" }), createBaseVNode("path", { d: "M20.49 15a9 9 0 1 1-2.12-9.36L23 10" })], -1), createTextVNode(" 重試 ", -1)])], 8, _hoisted_16$2)], 64)) : msg.value.errorType === "auth" ? (openBlock(), createElementBlock("button", {
+						key: 1,
+						type: "button",
+						class: "empty-response-retry-btn",
+						onClick: _cache[9] || (_cache[9] = () => _ctx.window.location.reload())
+					}, [..._cache[22] || (_cache[22] = [createBaseVNode("svg", {
+						xmlns: "http://www.w3.org/2000/svg",
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "none",
+						stroke: "currentColor",
+						"stroke-width": "2",
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round"
+					}, [
+						createBaseVNode("path", { d: "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" }),
+						createBaseVNode("polyline", { points: "10 17 15 12 10 7" }),
+						createBaseVNode("line", {
+							x1: "15",
+							y1: "12",
+							x2: "3",
+							y2: "12"
+						})
+					], -1), createTextVNode(" 重新登入 ", -1)])])) : (openBlock(), createElementBlock(Fragment, { key: 2 }, [createBaseVNode("button", {
+						type: "button",
+						class: "empty-response-retry-btn",
+						onClick: _cache[10] || (_cache[10] = ($event) => emit("regenerate-message", absoluteIndex.value))
+					}, [..._cache[23] || (_cache[23] = [createBaseVNode("svg", {
+						xmlns: "http://www.w3.org/2000/svg",
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "none",
+						stroke: "currentColor",
+						"stroke-width": "2",
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round"
+					}, [createBaseVNode("polyline", { points: "23 4 23 10 17 10" }), createBaseVNode("path", { d: "M20.49 15a9 9 0 1 1-2.12-9.36L23 10" })], -1), createTextVNode(" 重試 ", -1)])]), msg.value.errorType === "serverUnavailable" || msg.value.errorType === "unknown" ? (openBlock(), createElementBlock("button", {
+						key: 0,
+						type: "button",
+						class: "error-switch-model-btn",
+						onClick: _cache[11] || (_cache[11] = ($event) => emit("switch-model"))
+					}, [..._cache[24] || (_cache[24] = [createBaseVNode("svg", {
+						xmlns: "http://www.w3.org/2000/svg",
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "none",
+						stroke: "currentColor",
+						"stroke-width": "2",
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round"
+					}, [createBaseVNode("path", { d: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" })], -1), createTextVNode(" 切換模型 ", -1)])])) : createCommentVNode("", true)], 64))])) : createCommentVNode("", true)
+				], 36),
+				createBaseVNode("button", {
+					onClick: _cache[16] || (_cache[16] = ($event) => emit("copy", msg.value.content, $event)),
+					class: "mt-2 p-1.5 rounded-lg transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100",
+					style: { "color": "var(--text-tertiary)" },
+					title: "複製內容",
+					"aria-label": "複製訊息內容"
+				}, [..._cache[25] || (_cache[25] = [createBaseVNode("svg", {
+					xmlns: "http://www.w3.org/2000/svg",
+					class: "h-4 w-4",
+					fill: "none",
+					viewBox: "0 0 24 24",
+					stroke: "currentColor"
+				}, [createBaseVNode("path", {
+					"stroke-linecap": "round",
+					"stroke-linejoin": "round",
+					"stroke-width": "2",
+					d: "M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+				})], -1)])])
+			], 10, _hoisted_1$4);
+		};
+	}
+};
+var MessageItem_default = _sfc_main$4;
+
+//#endregion
+//#region src/composables/useToastQueue.js
+var MAX_TOASTS = 3;
+var nextId = 0;
+var toasts = ref([]);
+/**
+* Unified toast queue — max 3 visible, oldest dismissed first.
+*
+* Toast shape:
+*   { id, type: 'info' | 'undo', message, duration, data?, onAction?, onExpire?, timeoutId }
+*/
+function useToastQueue() {
+	function dismiss(id) {
+		const idx = toasts.value.findIndex((t) => t.id === id);
+		if (idx === -1) return;
+		const toast = toasts.value[idx];
+		if (toast.timeoutId != null) window.clearTimeout(toast.timeoutId);
+		toasts.value.splice(idx, 1);
+	}
+	function addToast({ type = "info", message, duration = 2200, data = null, onAction = null, onExpire = null }) {
+		if (typeof message !== "string" || !message.trim()) return null;
+		while (toasts.value.length >= MAX_TOASTS) {
+			const oldest = toasts.value[0];
+			if (oldest.onExpire) oldest.onExpire(oldest);
+			dismiss(oldest.id);
+		}
+		const id = ++nextId;
+		const timeoutId = window.setTimeout(() => {
+			const t = toasts.value.find((t$1) => t$1.id === id);
+			if (t?.onExpire) t.onExpire(t);
+			dismiss(id);
+		}, duration);
+		const toast = {
+			id,
+			type,
+			message: message.trim(),
+			duration,
+			data,
+			onAction,
+			onExpire,
+			timeoutId,
+			createdAt: Date.now()
+		};
+		toasts.value.push(toast);
+		return id;
+	}
+	/**
+	* Convenience: add a short info toast (model switch, status, etc.)
+	*/
+	function info(message, duration = 2200) {
+		return addToast({
+			type: "info",
+			message,
+			duration
+		});
+	}
+	/**
+	* Convenience: add an undo toast with action callback.
+	* Returns the toast id so callers can dismiss it manually.
+	*/
+	function undo(message, { onAction, onExpire, duration = 5e3, data = null } = {}) {
+		return addToast({
+			type: "undo",
+			message,
+			duration,
+			data,
+			onAction,
+			onExpire
+		});
+	}
+	/**
+	* Handle the action button click on an undo toast.
+	*/
+	function handleAction(id) {
+		const toast = toasts.value.find((t) => t.id === id);
+		if (!toast) return;
+		if (toast.onAction) toast.onAction(toast);
+		dismiss(id);
+	}
+	function dismissAll() {
+		while (toasts.value.length > 0) dismiss(toasts.value[0].id);
+	}
+	return {
+		toasts,
+		addToast,
+		info,
+		undo,
+		dismiss,
+		handleAction,
+		dismissAll
+	};
+}
 
 //#endregion
 //#region src/components/ControlPanel.vue
@@ -1993,15 +2730,56 @@ var _hoisted_1$3 = {
 };
 var _hoisted_2$3 = { class: "flex items-center gap-4" };
 var _hoisted_3$3 = { class: "flex flex-col gap-1" };
-var _hoisted_4$2 = ["label"];
-var _hoisted_5$1 = ["value"];
+var _hoisted_4$3 = { class: "font-mono uppercase" };
+var _hoisted_5$2 = {
+	key: 0,
+	style: { "color": "var(--accent-danger, #ef4444)" }
+};
 var _hoisted_6$1 = {
+	key: 0,
+	class: "absolute left-0 top-full mt-1 min-w-[200px] rounded-xl border shadow-lg overflow-hidden z-50",
+	style: {
+		"background-color": "var(--bg-input)",
+		"border-color": "var(--border-primary)"
+	}
+};
+var _hoisted_7$1 = {
+	class: "px-3 pt-2 pb-1 text-[10px] uppercase font-semibold tracking-wide",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_8$1 = ["onClick", "disabled"];
+var _hoisted_9$1 = { class: "flex flex-col gap-0.5 min-w-0" };
+var _hoisted_10$1 = {
+	class: "text-xs font-mono uppercase",
+	style: { "color": "var(--text-primary)" }
+};
+var _hoisted_11$1 = {
+	key: 0,
+	class: "text-[10px]",
+	style: { "color": "var(--accent-danger, #ef4444)" }
+};
+var _hoisted_12$1 = {
+	key: 1,
+	class: "text-[10px]",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_13$1 = {
+	key: 0,
+	xmlns: "http://www.w3.org/2000/svg",
+	class: "h-3.5 w-3.5 flex-shrink-0",
+	style: { "color": "var(--accent-primary)" },
+	fill: "none",
+	viewBox: "0 0 24 24",
+	stroke: "currentColor",
+	"stroke-width": "2.5"
+};
+var _hoisted_14$1 = {
 	key: 0,
 	class: "text-[11px] font-mono flex items-center gap-2",
 	style: { "color": "var(--accent-danger, #ef4444)" }
 };
-var _hoisted_7$1 = { class: "flex items-end gap-2 px-4 py-3" };
-var _hoisted_8$1 = {
+var _hoisted_15$1 = { class: "flex items-end gap-2 px-4 py-3" };
+var _hoisted_16$1 = {
 	key: 0,
 	class: "absolute left-2 right-2 bottom-full mb-2 rounded-xl border shadow-lg overflow-hidden z-50",
 	style: {
@@ -2009,52 +2787,57 @@ var _hoisted_8$1 = {
 		"border-color": "var(--border-primary)"
 	}
 };
-var _hoisted_9$1 = [
+var _hoisted_17$1 = [
 	"onMouseenter",
 	"onFocus",
 	"onPointerdown"
 ];
-var _hoisted_10$1 = { class: "flex items-center gap-3 min-w-0" };
-var _hoisted_11$1 = {
+var _hoisted_18$1 = { class: "flex items-center gap-3 min-w-0" };
+var _hoisted_19$1 = {
 	class: "text-xs font-mono px-2 py-1 rounded-lg",
 	style: {
 		"background-color": "color-mix(in srgb, var(--accent-primary) 12%, transparent)",
 		"color": "var(--text-primary)"
 	}
 };
-var _hoisted_12$1 = {
+var _hoisted_20$1 = {
 	class: "text-xs truncate",
 	style: { "color": "var(--text-secondary)" }
 };
-var _hoisted_13$1 = {
+var _hoisted_21$1 = {
 	key: 0,
 	class: "text-[10px] font-mono truncate",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_14$1 = [
+var _hoisted_22$1 = [
 	"value",
 	"onKeydown",
 	"maxlength",
 	"placeholder"
 ];
-var _hoisted_15$1 = {
+var _hoisted_23 = {
 	key: 1,
 	class: "px-2 pt-1 text-[11px] font-mono whitespace-normal break-words",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_16$1 = { class: "flex-shrink-0 mb-1 flex items-center gap-1" };
-var _hoisted_17$1 = ["title", "aria-label"];
-var _hoisted_18$1 = {
+var _hoisted_24 = {
+	key: 2,
+	class: "px-2 pt-1 text-[11px] font-mono",
+	style: { "color": "var(--accent-danger, #ef4444)" }
+};
+var _hoisted_25 = { class: "flex-shrink-0 mb-1 flex items-center gap-1" };
+var _hoisted_26 = ["title", "aria-label"];
+var _hoisted_27 = {
 	key: 0,
 	class: "px-5 pb-2 text-xs font-mono flex items-center gap-2",
 	style: { "color": "var(--accent-danger, #ef4444)" }
 };
-var _hoisted_19$1 = {
+var _hoisted_28 = {
 	key: 1,
 	class: "px-5 pb-2 text-xs font-mono flex items-center gap-2",
 	style: { "color": "var(--accent-secondary)" }
 };
-var _hoisted_20$1 = { class: "animate-pulse" };
+var _hoisted_29 = { class: "animate-pulse" };
 var _sfc_main$3 = {
 	__name: "ControlPanel",
 	props: /* @__PURE__ */ mergeModels([
@@ -2080,6 +2863,7 @@ var _sfc_main$3 = {
 		const emit = __emit;
 		const model = useModel(__props, "model");
 		const maxMessageLength = CHAT_CONFIG.maxMessageLength || 8e3;
+		const { info: showInfoToast } = useToastQueue();
 		const SLASH_COMMANDS = [
 			{
 				cmd: "/addSSHKey",
@@ -2175,7 +2959,10 @@ var _sfc_main$3 = {
 				const unavailable = config.available === false;
 				groups[cat].push({
 					value: key,
-					label: unavailable ? `${baseLabel} (⚠️ 目前負載高)` : baseLabel
+					label: unavailable ? `${baseLabel} (⚠️ 目前負載高)` : baseLabel,
+					baseLabel,
+					unavailable,
+					category: cat
 				});
 			}
 			return Object.keys(groups).map((label) => ({
@@ -2208,10 +2995,13 @@ var _sfc_main$3 = {
 		const isComposing = ref(false);
 		const isListening = ref(false);
 		const isFocused = ref(false);
+		const inputError = ref("");
 		let recognition = null;
 		const activeSlashIndex = ref(0);
 		const slashAreaRef = ref(null);
 		const slashMenuDismissed = ref(false);
+		const isModelDropdownOpen = ref(false);
+		const modelDropdownRef = ref(null);
 		const slashState = computed(() => {
 			const t = (props.userInput || "").trimStart();
 			if (!t.startsWith("/")) return null;
@@ -2256,13 +3046,31 @@ var _sfc_main$3 = {
 			slashMenuDismissed.value = false;
 		});
 		const isSlashMenuOpen = computed(() => showSlashMenu.value && !slashMenuDismissed.value);
+		const charCounterColor = computed(() => {
+			const len = (props.userInput || "").length;
+			if (len >= maxMessageLength) return "var(--accent-danger, #ef4444)";
+			if (len >= maxMessageLength * .8) return "#f59e0b";
+			return "var(--text-tertiary)";
+		});
+		const showCharCounter = computed(() => (props.userInput?.length || 0) > maxMessageLength * .5);
+		const toggleModelDropdown = () => {
+			isModelDropdownOpen.value = !isModelDropdownOpen.value;
+		};
+		const selectModel = (key, unavailable) => {
+			if (unavailable) return;
+			model.value = key;
+			isModelDropdownOpen.value = false;
+		};
 		const onGlobalPointerDown = (e) => {
-			if (!isSlashMenuOpen.value) return;
-			const area = slashAreaRef.value;
-			if (!area) return;
 			const t = e?.target;
-			if (t && area.contains(t)) return;
-			slashMenuDismissed.value = true;
+			if (isSlashMenuOpen.value) {
+				const area = slashAreaRef.value;
+				if (area && !area.contains(t)) slashMenuDismissed.value = true;
+			}
+			if (isModelDropdownOpen.value) {
+				const area = modelDropdownRef.value;
+				if (area && !area.contains(t)) isModelDropdownOpen.value = false;
+			}
 		};
 		onMounted(() => {
 			document.addEventListener("pointerdown", onGlobalPointerDown, true);
@@ -2293,7 +3101,18 @@ var _sfc_main$3 = {
 		});
 		const onInput = (e) => {
 			emit("update:userInput", e.target.value);
+			inputError.value = "";
 			adjustHeight();
+		};
+		const handleSend = () => {
+			const v = props.userInput || "";
+			if (props.isProcessing || props.isOnline === false || !v.trim()) return;
+			if (v.length > maxMessageLength) {
+				inputError.value = `訊息過長（${v.length} / ${maxMessageLength} 字元）`;
+				return;
+			}
+			inputError.value = "";
+			emit("send");
 		};
 		const setInput = (v) => {
 			emit("update:userInput", v);
@@ -2362,7 +3181,7 @@ var _sfc_main$3 = {
 					return;
 				}
 			}
-			if (!props.isProcessing && props.isOnline !== false && v.trim()) emit("send");
+			if (!props.isProcessing && props.isOnline !== false && v.trim()) handleSend();
 		};
 		const toggleVoice = () => {
 			if (isListening.value) {
@@ -2372,7 +3191,7 @@ var _sfc_main$3 = {
 			}
 			const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 			if (!SpeechRecognition) {
-				alert("您的瀏覽器不支援語音輸入 (Web Speech API)");
+				showInfoToast("您的瀏覽器不支援語音輸入 (Web Speech API)", 3e3);
 				return;
 			}
 			recognition = new SpeechRecognition();
@@ -2405,41 +3224,65 @@ var _sfc_main$3 = {
 					borderColor: isFocused.value ? "var(--border-secondary)" : "var(--border-primary)",
 					boxShadow: isFocused.value ? "0 0 0 1px var(--border-secondary)" : "none"
 				}),
-				onFocusin: _cache[3] || (_cache[3] = ($event) => isFocused.value = true),
-				onFocusout: _cache[4] || (_cache[4] = ($event) => isFocused.value = false)
+				onFocusin: _cache[2] || (_cache[2] = ($event) => isFocused.value = true),
+				onFocusout: _cache[3] || (_cache[3] = ($event) => isFocused.value = false)
 			}, [
-				createBaseVNode("div", _hoisted_1$3, [createBaseVNode("div", _hoisted_2$3, [createBaseVNode("div", _hoisted_3$3, [withDirectives(createBaseVNode("select", {
-					"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => model.value = $event),
-					class: "text-xs uppercase border rounded-lg px-2 py-1 cursor-pointer outline-none",
+				createBaseVNode("div", _hoisted_1$3, [createBaseVNode("div", _hoisted_2$3, [createBaseVNode("div", _hoisted_3$3, [createBaseVNode("div", {
+					ref_key: "modelDropdownRef",
+					ref: modelDropdownRef,
+					class: "relative"
+				}, [createBaseVNode("button", {
+					type: "button",
+					onClick: toggleModelDropdown,
+					class: "flex items-center gap-1.5 text-xs border rounded-lg px-2 py-1.5 cursor-pointer outline-none",
 					style: {
 						"background-color": "var(--bg-input)",
 						"color": "var(--text-secondary)",
 						"border-color": "var(--border-primary)"
 					}
-				}, [(openBlock(true), createElementBlock(Fragment, null, renderList(modelGroups.value, (group) => {
-					return openBlock(), createElementBlock("optgroup", {
-						key: group.label,
-						label: group.label
-					}, [(openBlock(true), createElementBlock(Fragment, null, renderList(group.options, (opt) => {
-						return openBlock(), createElementBlock("option", {
+				}, [
+					createBaseVNode("span", _hoisted_4$3, toDisplayString(selectedModelConfig.value?.label || model.value), 1),
+					selectedModelConfig.value?.available === false ? (openBlock(), createElementBlock("span", _hoisted_5$2, "⚠️")) : createCommentVNode("", true),
+					(openBlock(), createElementBlock("svg", {
+						xmlns: "http://www.w3.org/2000/svg",
+						class: normalizeClass(["h-3 w-3 opacity-50 transition-transform", { "rotate-180": isModelDropdownOpen.value }]),
+						fill: "none",
+						viewBox: "0 0 24 24",
+						stroke: "currentColor",
+						"stroke-width": "2.5"
+					}, [..._cache[4] || (_cache[4] = [createBaseVNode("path", {
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round",
+						d: "M19 9l-7 7-7-7"
+					}, null, -1)])], 2))
+				]), isModelDropdownOpen.value ? (openBlock(), createElementBlock("div", _hoisted_6$1, [(openBlock(true), createElementBlock(Fragment, null, renderList(modelGroups.value, (group) => {
+					return openBlock(), createElementBlock(Fragment, { key: group.label }, [createBaseVNode("div", _hoisted_7$1, toDisplayString(group.label), 1), (openBlock(true), createElementBlock(Fragment, null, renderList(group.options, (opt) => {
+						return openBlock(), createElementBlock("button", {
 							key: opt.value,
-							value: opt.value,
-							class: "py-1"
-						}, toDisplayString(opt.label), 9, _hoisted_5$1);
-					}), 128))], 8, _hoisted_4$2);
-				}), 128))], 512), [[vModelSelect, model.value]]), selectedModelConfig.value && selectedModelConfig.value.available === false ? (openBlock(), createElementBlock("div", _hoisted_6$1, [_cache[5] || (_cache[5] = createBaseVNode("span", null, "⚠️ 目前負載高", -1)), suggestedAlternativeKey.value ? (openBlock(), createElementBlock("button", {
+							type: "button",
+							onClick: ($event) => selectModel(opt.value, opt.unavailable),
+							disabled: opt.unavailable,
+							class: normalizeClass(["w-full text-left px-3 py-2 flex items-center justify-between gap-3 border-b last:border-b-0 transition-colors", opt.unavailable ? "cursor-not-allowed opacity-50" : "cursor-pointer"]),
+							style: normalizeStyle([{ borderColor: "color-mix(in srgb, var(--border-primary) 60%, transparent)" }, model.value === opt.value ? { backgroundColor: "color-mix(in srgb, var(--accent-primary) 10%, transparent)" } : {}])
+						}, [createBaseVNode("div", _hoisted_9$1, [createBaseVNode("span", _hoisted_10$1, toDisplayString(opt.baseLabel), 1), opt.unavailable ? (openBlock(), createElementBlock("span", _hoisted_11$1, "⚠️ 高負載")) : (openBlock(), createElementBlock("span", _hoisted_12$1, toDisplayString(opt.category), 1))]), model.value === opt.value ? (openBlock(), createElementBlock("svg", _hoisted_13$1, [..._cache[5] || (_cache[5] = [createBaseVNode("path", {
+							"stroke-linecap": "round",
+							"stroke-linejoin": "round",
+							d: "M5 13l4 4L19 7"
+						}, null, -1)])])) : createCommentVNode("", true)], 14, _hoisted_8$1);
+					}), 128))], 64);
+				}), 128))])) : createCommentVNode("", true)], 512), selectedModelConfig.value && selectedModelConfig.value.available === false ? (openBlock(), createElementBlock("div", _hoisted_14$1, [_cache[6] || (_cache[6] = createBaseVNode("span", null, "⚠️ 目前負載高", -1)), suggestedAlternativeKey.value ? (openBlock(), createElementBlock("button", {
 					key: 0,
 					type: "button",
 					class: "underline underline-offset-2",
 					style: { "color": "var(--accent-primary)" },
 					onClick: switchToSuggestedAlternative
 				}, " 建議切換至 " + toDisplayString(suggestedAlternativeLabel.value), 1)) : createCommentVNode("", true)])) : createCommentVNode("", true)])])]),
-				createBaseVNode("div", _hoisted_7$1, [createBaseVNode("div", {
+				createBaseVNode("div", _hoisted_15$1, [createBaseVNode("div", {
 					ref_key: "slashAreaRef",
 					ref: slashAreaRef,
 					class: "flex-1 relative min-w-0"
 				}, [
-					isSlashMenuOpen.value ? (openBlock(), createElementBlock("div", _hoisted_8$1, [(openBlock(true), createElementBlock(Fragment, null, renderList(slashItems.value, (item, idx) => {
+					isSlashMenuOpen.value ? (openBlock(), createElementBlock("div", _hoisted_16$1, [(openBlock(true), createElementBlock(Fragment, null, renderList(slashItems.value, (item, idx) => {
 						return openBlock(), createElementBlock("button", {
 							key: item.cmd,
 							type: "button",
@@ -2448,7 +3291,7 @@ var _sfc_main$3 = {
 							onMouseenter: ($event) => setActiveSlashIndex(idx),
 							onFocus: ($event) => setActiveSlashIndex(idx),
 							onPointerdown: withModifiers(($event) => applySlashCommand(item.cmd), ["prevent"])
-						}, [createBaseVNode("div", _hoisted_10$1, [createBaseVNode("code", _hoisted_11$1, toDisplayString(item.cmd), 1), createBaseVNode("span", _hoisted_12$1, toDisplayString(item.desc), 1)]), item.hint ? (openBlock(), createElementBlock("span", _hoisted_13$1, toDisplayString(item.hint), 1)) : createCommentVNode("", true)], 44, _hoisted_9$1);
+						}, [createBaseVNode("div", _hoisted_18$1, [createBaseVNode("code", _hoisted_19$1, toDisplayString(item.cmd), 1), createBaseVNode("span", _hoisted_20$1, toDisplayString(item.desc), 1)]), item.hint ? (openBlock(), createElementBlock("span", _hoisted_21$1, toDisplayString(item.hint), 1)) : createCommentVNode("", true)], 44, _hoisted_17$1);
 					}), 128))])) : createCommentVNode("", true),
 					createBaseVNode("textarea", {
 						ref_key: "textareaRef",
@@ -2469,14 +3312,15 @@ var _sfc_main$3 = {
 						style: { "color": "var(--text-primary)" },
 						rows: "1",
 						placeholder: isListening.value ? "聽取中..." : "對 server 下些指令"
-					}, null, 40, _hoisted_14$1),
-					activeSlashUsageHint.value ? (openBlock(), createElementBlock("div", _hoisted_15$1, " 提示：" + toDisplayString(activeSlashUsageHint.value), 1)) : createCommentVNode("", true),
-					__props.userInput.length > unref(maxMessageLength) * .8 ? (openBlock(), createElementBlock("div", {
-						key: 2,
+					}, null, 40, _hoisted_22$1),
+					activeSlashUsageHint.value ? (openBlock(), createElementBlock("div", _hoisted_23, " 提示：" + toDisplayString(activeSlashUsageHint.value), 1)) : createCommentVNode("", true),
+					inputError.value ? (openBlock(), createElementBlock("div", _hoisted_24, " ⚠ " + toDisplayString(inputError.value), 1)) : createCommentVNode("", true),
+					showCharCounter.value ? (openBlock(), createElementBlock("div", {
+						key: 3,
 						class: "px-2 pb-1 text-[11px] font-mono text-right",
-						style: normalizeStyle({ color: __props.userInput.length >= unref(maxMessageLength) ? "var(--color-danger, #ef4444)" : "var(--text-tertiary)" })
-					}, toDisplayString(__props.userInput.length) + " / " + toDisplayString(unref(maxMessageLength)), 5)) : createCommentVNode("", true)
-				], 512), createBaseVNode("div", _hoisted_16$1, [createVNode(Transition, {
+						style: normalizeStyle({ color: charCounterColor.value })
+					}, toDisplayString((__props.userInput || "").length) + " / " + toDisplayString(unref(maxMessageLength)), 5)) : createCommentVNode("", true)
+				], 512), createBaseVNode("div", _hoisted_25, [createVNode(Transition, {
 					name: "action-btn",
 					mode: "out-in"
 				}, {
@@ -2487,7 +3331,7 @@ var _sfc_main$3 = {
 						style: { "color": "var(--text-secondary)" },
 						title: "Slash commands",
 						"aria-label": "開啟指令選單"
-					}, [..._cache[6] || (_cache[6] = [createBaseVNode("svg", {
+					}, [..._cache[7] || (_cache[7] = [createBaseVNode("svg", {
 						xmlns: "http://www.w3.org/2000/svg",
 						class: "h-5 w-5",
 						viewBox: "0 0 24 24",
@@ -2508,12 +3352,12 @@ var _sfc_main$3 = {
 				}, {
 					default: withCtx(() => [__props.isProcessing ? (openBlock(), createElementBlock("button", {
 						key: "stop",
-						onClick: _cache[1] || (_cache[1] = ($event) => emit("stop")),
+						onClick: _cache[0] || (_cache[0] = ($event) => emit("stop")),
 						class: "action-btn-base",
 						style: { "color": "var(--text-secondary)" },
 						title: "停止",
 						"aria-label": "停止生成"
-					}, [..._cache[7] || (_cache[7] = [createBaseVNode("svg", {
+					}, [..._cache[8] || (_cache[8] = [createBaseVNode("svg", {
 						xmlns: "http://www.w3.org/2000/svg",
 						class: "h-5 w-5",
 						viewBox: "0 0 24 24",
@@ -2534,7 +3378,7 @@ var _sfc_main$3 = {
 						},
 						title: "停止聆聽",
 						"aria-label": "停止語音輸入"
-					}, [..._cache[8] || (_cache[8] = [createBaseVNode("svg", {
+					}, [..._cache[9] || (_cache[9] = [createBaseVNode("svg", {
 						xmlns: "http://www.w3.org/2000/svg",
 						class: "h-5 w-5",
 						fill: "none",
@@ -2547,12 +3391,12 @@ var _sfc_main$3 = {
 						d: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
 					})], -1)])])) : __props.userInput.trim() ? (openBlock(), createElementBlock("button", {
 						key: "send",
-						onClick: _cache[2] || (_cache[2] = ($event) => __props.isOnline !== false && emit("send")),
+						onClick: _cache[1] || (_cache[1] = ($event) => handleSend()),
 						class: normalizeClass(["action-btn-base", __props.isOnline !== false ? "action-btn-send" : "opacity-30 cursor-not-allowed"]),
 						style: normalizeStyle(__props.isOnline !== false ? "background-color: var(--accent-primary); color: white;" : "background-color: var(--bg-tertiary); color: var(--text-tertiary);"),
 						title: __props.isOnline !== false ? "發送" : "離線中，無法發送",
 						"aria-label": __props.isOnline !== false ? "發送訊息" : "離線中，無法發送"
-					}, [..._cache[9] || (_cache[9] = [createBaseVNode("svg", {
+					}, [..._cache[10] || (_cache[10] = [createBaseVNode("svg", {
 						xmlns: "http://www.w3.org/2000/svg",
 						class: "h-5 w-5",
 						fill: "none",
@@ -2563,14 +3407,14 @@ var _sfc_main$3 = {
 						"stroke-linecap": "round",
 						"stroke-linejoin": "round",
 						d: "M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"
-					})], -1)])], 14, _hoisted_17$1)) : (openBlock(), createElementBlock("button", {
+					})], -1)])], 14, _hoisted_26)) : (openBlock(), createElementBlock("button", {
 						key: "mic",
 						onClick: toggleVoice,
 						class: "action-btn-base",
 						style: { "color": "var(--text-tertiary)" },
 						title: "語音輸入",
 						"aria-label": "開始語音輸入"
-					}, [..._cache[10] || (_cache[10] = [createBaseVNode("svg", {
+					}, [..._cache[11] || (_cache[11] = [createBaseVNode("svg", {
 						xmlns: "http://www.w3.org/2000/svg",
 						class: "h-5 w-5",
 						fill: "none",
@@ -2584,13 +3428,57 @@ var _sfc_main$3 = {
 					})], -1)])]))]),
 					_: 1
 				})])]),
-				__props.isOnline === false ? (openBlock(), createElementBlock("div", _hoisted_18$1, [..._cache[11] || (_cache[11] = [createBaseVNode("span", null, "⚠ 伺服器離線，無法發送訊息", -1)])])) : createCommentVNode("", true),
-				__props.statusMessage ? (openBlock(), createElementBlock("div", _hoisted_19$1, [createBaseVNode("span", _hoisted_20$1, [_cache[12] || (_cache[12] = createBaseVNode("span", { class: "mr-1" }, "⚡", -1)), createTextVNode(toDisplayString(__props.statusMessage), 1)])])) : createCommentVNode("", true)
+				__props.isOnline === false ? (openBlock(), createElementBlock("div", _hoisted_27, [..._cache[12] || (_cache[12] = [createBaseVNode("span", null, "⚠ 伺服器離線，無法發送訊息", -1)])])) : createCommentVNode("", true),
+				__props.statusMessage ? (openBlock(), createElementBlock("div", _hoisted_28, [createBaseVNode("span", _hoisted_29, [_cache[13] || (_cache[13] = createBaseVNode("span", { class: "mr-1" }, "⚡", -1)), createTextVNode(toDisplayString(__props.statusMessage), 1)])])) : createCommentVNode("", true)
 			], 36);
 		};
 	}
 };
-var ControlPanel_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$3, [["__scopeId", "data-v-0404011f"]]);
+var ControlPanel_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$3, [["__scopeId", "data-v-d14faa33"]]);
+
+//#endregion
+//#region src/composables/useMarkdownRenderer.js
+var md = new lib_default({
+	html: false,
+	linkify: true,
+	typographer: true
+});
+var defaultFence = md.renderer.rules.fence || function(tokens, idx, options, env, self) {
+	return self.renderToken(tokens, idx, options);
+};
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+	const token = tokens[idx];
+	const encodedCode = token.content.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+	const lang = token.info.trim().split(/\s+/)[0] || "";
+	const langLabel = lang ? `<span class="code-block-lang">${md.utils.escapeHtml(lang)}</span>` : "";
+	const codeHtml = defaultFence(tokens, idx, options, env, self);
+	return "<div class=\"code-block-wrapper\"><div class=\"code-block-header\">" + langLabel + `<button type="button" class="copy-code-btn" data-code="${encodedCode}" title="複製程式碼"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>` + codeHtml + `</div>`;
+};
+var DEFAULT_MAX_RENDER_LENGTH = 2e4;
+function useMarkdownRenderer(maxRenderLength = DEFAULT_MAX_RENDER_LENGTH) {
+	const renderMarkdown = (text) => {
+		if (!text) return "";
+		if (text.length > maxRenderLength) return "<p>[訊息過長，無法渲染，請使用複製功能查看原始內容]</p>";
+		try {
+			return purify.sanitize(md.render(text), {
+				ADD_TAGS: ["button"],
+				ADD_ATTR: ["data-code"],
+				FORBID_TAGS: ["style"],
+				FORBID_ATTR: [
+					"style",
+					"onerror",
+					"onload",
+					"onclick",
+					"onmouseover"
+				]
+			});
+		} catch (err) {
+			console.error("Markdown rendering failed:", err);
+			return "<p>[內容渲染失敗]</p>";
+		}
+	};
+	return { renderMarkdown };
+}
 
 //#endregion
 //#region src/utils/messageActions.js
@@ -2621,78 +3509,71 @@ var _hoisted_1$2 = {
 	"aria-busy": "true"
 };
 var _hoisted_2$2 = {
+	key: 0,
+	class: "flex flex-col items-center justify-center gap-3 py-16",
+	role: "alert"
+};
+var _hoisted_3$2 = {
+	xmlns: "http://www.w3.org/2000/svg",
+	class: "h-10 w-10",
+	fill: "none",
+	viewBox: "0 0 24 24",
+	stroke: "currentColor",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_4$2 = {
 	key: 1,
 	class: "chat-welcome-card",
 	"aria-label": "首次使用引導"
 };
-var _hoisted_3$2 = { class: "welcome-shortcut-grid" };
-var _hoisted_4$1 = ["disabled", "onClick"];
-var _hoisted_5 = { class: "welcome-shortcut-head" };
-var _hoisted_6 = {
+var _hoisted_5$1 = { class: "welcome-shortcut-grid" };
+var _hoisted_6 = ["disabled", "onClick"];
+var _hoisted_7 = { class: "welcome-shortcut-head" };
+var _hoisted_8 = { class: "welcome-examples" };
+var _hoisted_9 = { class: "welcome-examples-chips" };
+var _hoisted_10 = ["disabled", "onClick"];
+var _hoisted_11 = {
 	key: 2,
 	class: "flex justify-center"
 };
-var _hoisted_7 = ["disabled"];
-var _hoisted_8 = {
+var _hoisted_12 = ["disabled"];
+var _hoisted_13 = {
 	key: 3,
 	class: "message-mobile-hint"
 };
-var _hoisted_9 = ["data-msg-key"];
-var _hoisted_10 = {
-	key: 0,
-	class: "text-xs font-bold text-white"
-};
-var _hoisted_11 = {
-	key: 1,
-	class: "text-xs font-bold text-white"
-};
-var _hoisted_12 = ["onTouchstartPassive"];
-var _hoisted_13 = {
-	class: "text-[11px] mb-1.5 flex justify-between items-center gap-4 font-medium tracking-wide",
-	style: { "color": "var(--text-tertiary)" }
-};
-var _hoisted_14 = { class: "message-inline-actions" };
-var _hoisted_15 = ["onClick"];
-var _hoisted_16 = ["onClick"];
-var _hoisted_17 = ["innerHTML"];
-var _hoisted_18 = {
-	key: 0,
-	class: "message-fade-mask"
-};
-var _hoisted_19 = {
-	key: 0,
-	class: "mt-1"
-};
-var _hoisted_20 = ["onClick"];
-var _hoisted_21 = {
-	key: 1,
-	class: "mt-3"
-};
-var _hoisted_22 = {
-	key: 2,
-	class: "msg-aborted-banner"
-};
-var _hoisted_23 = ["onClick"];
-var _hoisted_24 = {
-	key: 4,
+var _hoisted_14 = ["data-index"];
+var _hoisted_15 = {
+	key: 5,
 	class: "flex gap-3 items-start"
 };
-var _hoisted_25 = { class: "retry-banner-body" };
-var _hoisted_26 = { class: "retry-countdown-text" };
-var _hoisted_27 = ["aria-valuenow"];
-var _hoisted_28 = { class: "retry-banner-actions" };
-var _hoisted_29 = {
+var _hoisted_16 = {
+	class: "rounded-2xl p-4 border flex items-center gap-2 shadow-sm",
+	style: {
+		"background-color": "var(--ai-bubble)",
+		"border-color": "var(--border-primary)"
+	}
+};
+var _hoisted_17 = {
+	class: "text-xs",
+	"aria-live": "polite",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_18 = { class: "retry-banner-body" };
+var _hoisted_19 = { class: "retry-countdown-text" };
+var _hoisted_20 = ["aria-valuenow"];
+var _hoisted_21 = { class: "retry-banner-actions" };
+var _hoisted_22 = {
 	class: "w-full px-4 md:px-[15%] pb-6 pt-3",
 	style: { "background-color": "var(--bg-primary)" }
 };
 var TOUCH_DEVICE_QUERY = "(hover: none), (pointer: coarse)";
 var LONG_PRESS_DELAY_MS = 420;
 var LONG_PRESS_MOVE_TOLERANCE_PX = 14;
-var DEFAULT_MAX_RENDER_LENGTH = 2e4;
 var DEFAULT_WINDOW_SIZE = 80;
 var DEFAULT_LOAD_CHUNK = 20;
 var BOTTOM_STICKY_THRESHOLD = 80;
 var FLOATING_STACK_GAP = 10;
+var THINKING_STATUS_ESCALATION_SEC = 10;
 var collapsedLines = 18;
 var _sfc_main$2 = {
 	__name: "MessageList",
@@ -2733,6 +3614,10 @@ var _sfc_main$2 = {
 			type: Boolean,
 			default: false
 		},
+		toolCallStatus: {
+			type: String,
+			default: null
+		},
 		retryCountdown: {
 			type: Object,
 			default: () => ({
@@ -2762,6 +3647,10 @@ var _sfc_main$2 = {
 			type: Boolean,
 			default: false
 		},
+		historyLoadFailed: {
+			type: Boolean,
+			default: false
+		},
 		isLoadingMore: {
 			type: Boolean,
 			default: false
@@ -2775,9 +3664,10 @@ var _sfc_main$2 = {
 		"stop",
 		"edit-message",
 		"regenerate-message",
-		"load-more"
+		"load-more",
+		"retry-history"
 	],
-	setup(__props, { emit: __emit }) {
+	setup(__props, { expose: __expose, emit: __emit }) {
 		const props = __props;
 		const emit = __emit;
 		const QUICK_START_COMMANDS = Object.freeze([
@@ -2797,6 +3687,23 @@ var _sfc_main$2 = {
 				desc: "列出可用指令與功能"
 			}
 		]);
+		const ALL_EXAMPLE_PROMPTS = Object.freeze([
+			"我的磁碟快滿了，怎麼辦？",
+			"幫我看看有哪些 Docker 容器在跑",
+			"系統負載很高，是哪個程式在吃 CPU？",
+			"記憶體用量怎麼樣？有沒有快超標？",
+			"目前有哪些使用者登入了系統？",
+			"有哪些 port 正在監聽中？",
+			"幫我查看 /var/log 最新的錯誤訊息",
+			"硬碟空間怎麼分布的？哪個目錄最大？"
+		]);
+		function pickRandomExamples(pool, count = 3) {
+			return [...pool].sort(() => Math.random() - .5).slice(0, count);
+		}
+		const displayedExamples = ref(pickRandomExamples(ALL_EXAMPLE_PROMPTS));
+		const refreshExamples = () => {
+			displayedExamples.value = pickRandomExamples(ALL_EXAMPLE_PROMPTS);
+		};
 		const isTouchDevice = ref(false);
 		const messageActionMenu = ref({
 			visible: false,
@@ -2809,30 +3716,15 @@ var _sfc_main$2 = {
 			startX: 0,
 			startY: 0
 		};
-		const md = new lib_default({
-			html: false,
-			linkify: true,
-			typographer: true
-		});
-		const defaultFence = md.renderer.rules.fence || function(tokens, idx, options, env, self) {
-			return self.renderToken(tokens, idx, options);
-		};
-		md.renderer.rules.fence = (tokens, idx, options, env, self) => {
-			const token = tokens[idx];
-			const encodedCode = token.content.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-			const lang = token.info.trim().split(/\s+/)[0] || "";
-			const langLabel = lang ? `<span class="code-block-lang">${md.utils.escapeHtml(lang)}</span>` : "";
-			const codeHtml = defaultFence(tokens, idx, options, env, self);
-			return "<div class=\"code-block-wrapper\"><div class=\"code-block-header\">" + langLabel + `<button type="button" class="copy-code-btn" data-code="${encodedCode}" title="複製程式碼"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>` + codeHtml + `</div>`;
-		};
-		const MAX_RENDER_LENGTH = Number.isInteger(UI_CONFIG.markdownMaxRenderLength) && UI_CONFIG.markdownMaxRenderLength > 0 ? UI_CONFIG.markdownMaxRenderLength : DEFAULT_MAX_RENDER_LENGTH;
+		const { renderMarkdown } = useMarkdownRenderer(Number.isInteger(UI_CONFIG.markdownMaxRenderLength) && UI_CONFIG.markdownMaxRenderLength > 0 ? UI_CONFIG.markdownMaxRenderLength : 2e4);
 		const WINDOW_SIZE = Number.isInteger(UI_CONFIG.messageWindowSize) && UI_CONFIG.messageWindowSize > 0 ? UI_CONFIG.messageWindowSize : DEFAULT_WINDOW_SIZE;
 		const LOAD_CHUNK = Number.isInteger(UI_CONFIG.messageWindowLoadChunk) && UI_CONFIG.messageWindowLoadChunk > 0 ? UI_CONFIG.messageWindowLoadChunk : DEFAULT_LOAD_CHUNK;
 		const windowStart = ref(0);
 		const hasHiddenMessages = computed(() => windowStart.value > 0 || props.hasMoreFromServer);
 		const visibleMessages = computed(() => props.messages.slice(windowStart.value));
-		const showHistorySkeleton = computed(() => props.isHistoryLoading && props.messages.length === 0);
-		const showWelcomeCard = computed(() => !showHistorySkeleton.value && props.messages.length === 0);
+		const showHistorySkeleton = computed(() => props.isHistoryLoading && !props.historyLoadFailed);
+		const showHistoryLoadFailed = computed(() => props.historyLoadFailed && props.messages.length === 0);
+		const showWelcomeCard = computed(() => !showHistorySkeleton.value && !showHistoryLoadFailed.value && props.messages.length === 0);
 		const quickStartDisabled = computed(() => props.isProcessing || props.isOnline === false);
 		let pendingServerLoad = false;
 		let scrollHeightBeforeLoad = 0;
@@ -2875,27 +3767,6 @@ var _sfc_main$2 = {
 			nextTick(() => {
 				if (el) el.scrollTop += el.scrollHeight - prevScrollHeight;
 			});
-		};
-		const renderMarkdown = (text) => {
-			if (!text) return "";
-			if (text.length > MAX_RENDER_LENGTH) return "<p>[訊息過長，無法渲染，請使用複製功能查看原始內容]</p>";
-			try {
-				return purify.sanitize(md.render(text), {
-					ADD_TAGS: ["button"],
-					ADD_ATTR: ["data-code"],
-					FORBID_TAGS: ["style"],
-					FORBID_ATTR: [
-						"style",
-						"onerror",
-						"onload",
-						"onclick",
-						"onmouseover"
-					]
-				});
-			} catch (err) {
-				console.error("Markdown rendering failed:", err);
-				return "<p>[內容渲染失敗]</p>";
-			}
 		};
 		const messageContainer = ref(null);
 		const retryBannerRef = ref(null);
@@ -2978,6 +3849,7 @@ var _sfc_main$2 = {
 				if (typeof touchDeviceQuery.removeEventListener === "function") touchDeviceQuery.removeEventListener("change", syncTouchDeviceState);
 				else if (typeof touchDeviceQuery.removeListener === "function") touchDeviceQuery.removeListener(syncTouchDeviceState);
 			}
+			clearThinkingTimer();
 			clearLongPressTracking();
 			resizeObserver?.disconnect();
 			retryBannerObserver?.disconnect();
@@ -3002,11 +3874,43 @@ var _sfc_main$2 = {
 			await nextTick();
 			handleComposerSend();
 		};
+		const fillExamplePrompt = (prompt) => {
+			if (!prompt || quickStartDisabled.value) return;
+			emit("update:userInput", prompt);
+		};
 		const jumpToBottom = () => {
 			autoStickToBottom.value = true;
 			userAtBottom.value = true;
 			lockScrollToBottom();
 		};
+		const showTypingIndicator = computed(() => {
+			if (!props.isProcessing || props.isRetrying) return false;
+			const lastMsg = props.messages[props.messages.length - 1];
+			if (lastMsg?.role !== "ai") return false;
+			if (!lastMsg.content) return true;
+			if (props.toolCallStatus) return true;
+			return false;
+		});
+		const thinkingElapsedSec = ref(0);
+		let thinkingTimer = null;
+		const clearThinkingTimer = () => {
+			if (!thinkingTimer) return;
+			clearInterval(thinkingTimer);
+			thinkingTimer = null;
+		};
+		const startThinkingTimer = () => {
+			clearThinkingTimer();
+			const startedAt = Date.now();
+			thinkingElapsedSec.value = 0;
+			thinkingTimer = setInterval(() => {
+				thinkingElapsedSec.value = Math.floor((Date.now() - startedAt) / 1e3);
+			}, 1e3);
+		};
+		const typingIndicatorText = computed(() => {
+			if (props.toolCallStatus) return props.toolCallStatus;
+			if (thinkingElapsedSec.value >= THINKING_STATUS_ESCALATION_SEC) return "AI 仍在思考，請稍候...";
+			return "AI 正在思考中...";
+		});
 		const showRetryBanner = computed(() => props.isRetrying && Boolean(props.statusMessage));
 		const retryProgressPercent = computed(() => {
 			const totalSec = Number(props.retryCountdown?.totalSec);
@@ -3038,11 +3942,19 @@ var _sfc_main$2 = {
 			await nextTick();
 			measureRetryBanner();
 		});
+		watch(showTypingIndicator, (visible) => {
+			if (visible) {
+				startThinkingTimer();
+				return;
+			}
+			clearThinkingTimer();
+			thinkingElapsedSec.value = 0;
+		}, { immediate: true });
 		const writeTextToClipboard = async (text) => {
 			if (navigator.clipboard?.writeText) try {
 				await navigator.clipboard.writeText(text);
 				return true;
-			} catch (_) {}
+			} catch {}
 			const textarea = document.createElement("textarea");
 			textarea.value = text;
 			textarea.setAttribute("readonly", "");
@@ -3189,14 +4101,10 @@ var _sfc_main$2 = {
 			const createdAt = msg.createdAt ?? msg.command?.createdAt ?? "";
 			const createdAtText = createdAt === null || createdAt === void 0 ? "" : String(createdAt).trim();
 			const fingerprint = buildMessageFingerprint(msg, createdAtText);
-			let baseKey = "";
-			if (id !== null && id !== void 0 && String(id).trim()) baseKey = `msg:id:${String(id).trim()}`;
-			else if (createdAtText) baseKey = `msg:createdAt:${createdAtText}:${hashText(fingerprint)}`;
-			else {
+			const resolvedKey = allocateUniqueMessageKey(id !== null && id !== void 0 && String(id).trim() ? `msg:id:${String(id).trim()}` : createdAtText ? `msg:createdAt:${createdAtText}:${hashText(fingerprint)}` : (() => {
 				localMessageKeyCounter += 1;
-				baseKey = `msg:local:${localMessageKeyCounter}:${hashText(fingerprint)}`;
-			}
-			const resolvedKey = allocateUniqueMessageKey(baseKey);
+				return `msg:local:${localMessageKeyCounter}:${hashText(fingerprint)}`;
+			})());
 			messageKeyByObject.set(msg, resolvedKey);
 			return resolvedKey;
 		};
@@ -3218,13 +4126,21 @@ var _sfc_main$2 = {
 			if (msg.command) return false;
 			return content.length > 1800 || lineCountOf(content) > 24;
 		};
-		const shouldShowEditAction = (entry) => entry?.msg?.role === "user" && !props.isProcessing;
-		const shouldShowRegenerateAction = (entry) => {
-			if (entry?.msg?.role !== "ai" || props.isProcessing) return false;
-			if (typeof props.canRegenerateMessage === "function") return Boolean(props.canRegenerateMessage(entry.absoluteIndex));
-			return true;
-		};
 		const isExpanded = (messageKey) => Boolean(expandedStates.value[messageKey]);
+		const VIRTUAL_OVERSCAN = Number.isInteger(UI_CONFIG.virtualScrollOverscan) && UI_CONFIG.virtualScrollOverscan > 0 ? UI_CONFIG.virtualScrollOverscan : 5;
+		const VIRTUAL_ESTIMATE_SIZE = Number.isInteger(UI_CONFIG.virtualScrollEstimateSize) && UI_CONFIG.virtualScrollEstimateSize > 0 ? UI_CONFIG.virtualScrollEstimateSize : 120;
+		const virtualItemCount = computed(() => visibleMessagesWithKeys.value.length);
+		const rowVirtualizer = useVirtualizer(computed(() => ({
+			count: virtualItemCount.value,
+			getScrollElement: () => messageContainer.value,
+			estimateSize: () => VIRTUAL_ESTIMATE_SIZE,
+			overscan: VIRTUAL_OVERSCAN
+		})));
+		const virtualItems = computed(() => rowVirtualizer.value.getVirtualItems());
+		const totalVirtualSize = computed(() => rowVirtualizer.value.getTotalSize());
+		const measureElement = (el) => {
+			if (el) rowVirtualizer.value.measureElement(el);
+		};
 		const escapeAttributeSelector = (value) => {
 			const text = String(value ?? "");
 			if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(text);
@@ -3272,6 +4188,23 @@ var _sfc_main$2 = {
 				[messageKey]: expanding
 			};
 		};
+		const handleSwitchModel = () => {
+			const nextModel = Object.keys(props.availableModels || {}).find((k) => k !== props.model);
+			if (nextModel) emit("update:model", nextModel);
+		};
+		__expose({ scrollToPendingCommand() {
+			let pendingIdx = -1;
+			for (let i = props.messages.length - 1; i >= 0; i--) if (props.messages[i]?.command?.status === "pending") {
+				pendingIdx = i;
+				break;
+			}
+			if (pendingIdx === -1) return;
+			if (pendingIdx < windowStart.value) windowStart.value = pendingIdx;
+			const visibleIdx = pendingIdx - windowStart.value;
+			nextTick(() => {
+				rowVirtualizer.value.scrollToIndex(visibleIdx, { behavior: "smooth" });
+			});
+		} });
 		return (_ctx, _cache) => {
 			return openBlock(), createElementBlock("div", {
 				class: "flex flex-col h-full relative min-w-0 floating-stack-root",
@@ -3280,25 +4213,70 @@ var _sfc_main$2 = {
 				createBaseVNode("div", {
 					ref_key: "messageContainer",
 					ref: messageContainer,
-					class: "message-list-container flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar",
+					class: "message-list-container flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar",
 					role: "log",
 					"aria-label": "對話訊息"
-				}, [
-					showHistorySkeleton.value ? (openBlock(), createElementBlock("div", _hoisted_1$2, [..._cache[6] || (_cache[6] = [createStaticVNode("<div class=\"inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium animate-pulse\" style=\"background-color:var(--bg-secondary);color:var(--text-tertiary);border:1px solid var(--border-primary);\"><span>載入對話紀錄中...</span></div><div class=\"flex gap-3 items-start\"><div class=\"flex-shrink-0 w-9 h-9 rounded-xl animate-pulse\" style=\"background:color-mix(in srgb, var(--accent-primary) 25%, var(--bg-secondary));\"></div><div class=\"flex-1 max-w-[80%] rounded-2xl p-4 border animate-pulse\" style=\"background-color:var(--ai-bubble);border-color:var(--border-primary);\"><div class=\"h-3.5 w-24 rounded mb-3\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 20%, transparent);\"></div><div class=\"h-3.5 w-full rounded mb-2\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div><div class=\"h-3.5 w-5/6 rounded\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div></div></div><div class=\"flex gap-3 items-start flex-row-reverse\"><div class=\"flex-shrink-0 w-9 h-9 rounded-xl animate-pulse\" style=\"background:color-mix(in srgb, var(--accent-primary) 20%, var(--bg-secondary));\"></div><div class=\"flex-1 max-w-[72%] rounded-2xl p-4 border animate-pulse\" style=\"background-color:var(--user-bubble);border-color:var(--border-primary);\"><div class=\"h-3.5 w-20 rounded mb-3\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 20%, transparent);\"></div><div class=\"h-3.5 w-full rounded\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div></div></div>", 3)])])) : createCommentVNode("", true),
-					showWelcomeCard.value ? (openBlock(), createElementBlock("section", _hoisted_2$2, [
-						_cache[7] || (_cache[7] = createBaseVNode("div", { class: "welcome-badge" }, "歡迎使用 Server Assistant", -1)),
-						_cache[8] || (_cache[8] = createBaseVNode("h2", { class: "welcome-title" }, "先試試常用斜線指令", -1)),
-						_cache[9] || (_cache[9] = createBaseVNode("p", { class: "welcome-description" }, " 系統會直接由後端執行這些查詢，不經 AI 推理，回應更快也更穩定。 ", -1)),
-						createBaseVNode("div", _hoisted_3$2, [(openBlock(true), createElementBlock(Fragment, null, renderList(unref(QUICK_START_COMMANDS), (item) => {
+				}, [showHistorySkeleton.value ? (openBlock(), createElementBlock("div", _hoisted_1$2, [..._cache[10] || (_cache[10] = [createStaticVNode("<div class=\"inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium animate-pulse\" style=\"background-color:var(--bg-secondary);color:var(--text-tertiary);border:1px solid var(--border-primary);\"><span>載入對話紀錄中...</span></div><div class=\"flex gap-3 items-start\"><div class=\"flex-shrink-0 w-9 h-9 rounded-xl animate-pulse\" style=\"background:color-mix(in srgb, var(--accent-primary) 25%, var(--bg-secondary));\"></div><div class=\"flex-1 max-w-[80%] rounded-2xl p-4 border animate-pulse\" style=\"background-color:var(--ai-bubble);border-color:var(--border-primary);\"><div class=\"h-3.5 w-24 rounded mb-3\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 20%, transparent);\"></div><div class=\"h-3.5 w-full rounded mb-2\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div><div class=\"h-3.5 w-5/6 rounded\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div></div></div><div class=\"flex gap-3 items-start flex-row-reverse\"><div class=\"flex-shrink-0 w-9 h-9 rounded-xl animate-pulse\" style=\"background:color-mix(in srgb, var(--accent-primary) 20%, var(--bg-secondary));\"></div><div class=\"flex-1 max-w-[72%] rounded-2xl p-4 border animate-pulse\" style=\"background-color:var(--user-bubble);border-color:var(--border-primary);\"><div class=\"h-3.5 w-20 rounded mb-3\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 20%, transparent);\"></div><div class=\"h-3.5 w-full rounded\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div></div></div>", 3)])])) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+					showHistoryLoadFailed.value ? (openBlock(), createElementBlock("div", _hoisted_2$2, [
+						(openBlock(), createElementBlock("svg", _hoisted_3$2, [..._cache[11] || (_cache[11] = [createBaseVNode("path", {
+							"stroke-linecap": "round",
+							"stroke-linejoin": "round",
+							"stroke-width": "1.5",
+							d: "M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+						}, null, -1)])])),
+						_cache[13] || (_cache[13] = createBaseVNode("p", {
+							class: "text-sm",
+							style: { "color": "var(--text-secondary)" }
+						}, "載入對話失敗", -1)),
+						createBaseVNode("button", {
+							type: "button",
+							class: "inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+							style: {
+								"background-color": "var(--accent-primary)",
+								"color": "var(--bg-primary)"
+							},
+							onClick: _cache[0] || (_cache[0] = ($event) => emit("retry-history"))
+						}, [..._cache[12] || (_cache[12] = [createBaseVNode("svg", {
+							xmlns: "http://www.w3.org/2000/svg",
+							class: "h-4 w-4",
+							fill: "none",
+							viewBox: "0 0 24 24",
+							stroke: "currentColor"
+						}, [createBaseVNode("path", {
+							"stroke-linecap": "round",
+							"stroke-linejoin": "round",
+							"stroke-width": "2",
+							d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+						})], -1), createTextVNode(" 重試 ", -1)])])
+					])) : createCommentVNode("", true),
+					showWelcomeCard.value ? (openBlock(), createElementBlock("section", _hoisted_4$2, [
+						_cache[15] || (_cache[15] = createBaseVNode("div", { class: "welcome-badge" }, "歡迎使用 Server Assistant", -1)),
+						_cache[16] || (_cache[16] = createBaseVNode("h2", { class: "welcome-title" }, "先試試常用斜線指令", -1)),
+						_cache[17] || (_cache[17] = createBaseVNode("p", { class: "welcome-description" }, " 系統會直接由後端執行這些查詢，不經 AI 推理，回應更快也更穩定。 ", -1)),
+						createBaseVNode("div", _hoisted_5$1, [(openBlock(true), createElementBlock(Fragment, null, renderList(unref(QUICK_START_COMMANDS), (item) => {
 							return openBlock(), createElementBlock("button", {
 								key: item.cmd,
 								type: "button",
 								class: "welcome-shortcut-btn",
 								disabled: quickStartDisabled.value,
 								onClick: ($event) => runQuickStartCommand(item.cmd)
-							}, [createBaseVNode("div", _hoisted_5, [createBaseVNode("code", null, toDisplayString(item.cmd), 1), createBaseVNode("span", null, toDisplayString(item.label), 1)]), createBaseVNode("p", null, toDisplayString(item.desc), 1)], 8, _hoisted_4$1);
+							}, [createBaseVNode("div", _hoisted_7, [createBaseVNode("code", null, toDisplayString(item.cmd), 1), createBaseVNode("span", null, toDisplayString(item.label), 1)]), createBaseVNode("p", null, toDisplayString(item.desc), 1)], 8, _hoisted_6);
 						}), 128))]),
-						_cache[10] || (_cache[10] = createBaseVNode("p", { class: "welcome-tip" }, [
+						createBaseVNode("div", _hoisted_8, [createBaseVNode("div", { class: "welcome-examples-header" }, [_cache[14] || (_cache[14] = createBaseVNode("p", { class: "welcome-examples-label" }, "或試試自然語言提問：", -1)), createBaseVNode("button", {
+							type: "button",
+							class: "welcome-examples-refresh",
+							onClick: refreshExamples,
+							title: "換一批範例"
+						}, "↻ 換一批")]), createBaseVNode("div", _hoisted_9, [(openBlock(true), createElementBlock(Fragment, null, renderList(displayedExamples.value, (ex) => {
+							return openBlock(), createElementBlock("button", {
+								key: ex,
+								type: "button",
+								class: "welcome-example-chip",
+								disabled: quickStartDisabled.value,
+								onClick: ($event) => fillExamplePrompt(ex)
+							}, toDisplayString(ex), 9, _hoisted_10);
+						}), 128))])]),
+						_cache[18] || (_cache[18] = createBaseVNode("p", { class: "welcome-tip" }, [
 							createTextVNode(" 也可以直接輸入自然語言，或使用 "),
 							createBaseVNode("code", null, "!<Linux 指令>"),
 							createTextVNode("（例如 "),
@@ -3306,7 +4284,7 @@ var _sfc_main$2 = {
 							createTextVNode("）。 ")
 						], -1))
 					])) : createCommentVNode("", true),
-					hasHiddenMessages.value ? (openBlock(), createElementBlock("div", _hoisted_6, [createBaseVNode("button", {
+					hasHiddenMessages.value ? (openBlock(), createElementBlock("div", _hoisted_11, [createBaseVNode("button", {
 						type: "button",
 						onClick: loadEarlierMessages,
 						disabled: __props.isLoadingMore,
@@ -3316,135 +4294,74 @@ var _sfc_main$2 = {
 							"color": "var(--text-tertiary)",
 							"border-color": "var(--border-primary)"
 						}
-					}, [__props.isLoadingMore ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [createTextVNode("載入中...")], 64)) : windowStart.value > 0 ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("載入更早訊息（還有 " + toDisplayString(windowStart.value) + " 則）", 1)], 64)) : (openBlock(), createElementBlock(Fragment, { key: 2 }, [createTextVNode("從資料庫載入更多訊息")], 64))], 8, _hoisted_7)])) : createCommentVNode("", true),
-					isTouchDevice.value && visibleMessagesWithKeys.value.length > 0 ? (openBlock(), createElementBlock("div", _hoisted_8, " 長按訊息可快速「複製」或「引用」 ")) : createCommentVNode("", true),
-					(openBlock(true), createElementBlock(Fragment, null, renderList(visibleMessagesWithKeys.value, (entry) => {
+					}, [__props.isLoadingMore ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [createTextVNode("載入中...")], 64)) : windowStart.value > 0 ? (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("載入更早訊息（還有 " + toDisplayString(windowStart.value) + " 則）", 1)], 64)) : (openBlock(), createElementBlock(Fragment, { key: 2 }, [createTextVNode("從資料庫載入更多訊息")], 64))], 8, _hoisted_12)])) : createCommentVNode("", true),
+					isTouchDevice.value && visibleMessagesWithKeys.value.length > 0 ? (openBlock(), createElementBlock("div", _hoisted_13, " 長按訊息可快速「複製」或「引用」 ")) : createCommentVNode("", true),
+					visibleMessagesWithKeys.value.length > 0 ? (openBlock(), createElementBlock("div", {
+						key: 4,
+						style: normalizeStyle({
+							height: `${totalVirtualSize.value}px`,
+							width: "100%",
+							position: "relative"
+						})
+					}, [(openBlock(true), createElementBlock(Fragment, null, renderList(virtualItems.value, (virtualRow) => {
 						return openBlock(), createElementBlock("div", {
-							key: entry.messageKey,
-							"data-msg-key": entry.messageKey,
-							class: normalizeClass(["flex gap-3 items-start group", entry.msg.role === "user" ? "flex-row-reverse" : "flex-row"])
-						}, [
-							createBaseVNode("div", { class: normalizeClass(["flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden select-none shadow-sm", entry.msg.role === "user" ? "bg-gradient-to-br from-indigo-500 to-purple-600" : "bg-gradient-to-br from-emerald-500 to-teal-600"]) }, [entry.msg.role === "user" ? (openBlock(), createElementBlock("span", _hoisted_10, "U")) : (openBlock(), createElementBlock("span", _hoisted_11, "AI"))], 2),
-							createBaseVNode("div", {
-								class: "max-w-[85%] min-w-0 rounded-2xl p-4 shadow-sm transition-all duration-200",
-								onTouchstartPassive: ($event) => handleMessageTouchStart($event, entry.msg.content),
-								onTouchmovePassive: handleMessageTouchMove,
-								onTouchend: handleMessageTouchEnd,
-								onTouchcancel: handleMessageTouchEnd,
-								style: normalizeStyle(entry.msg.role === "user" ? {
-									backgroundColor: "var(--user-bubble)",
-									color: "var(--text-primary)"
-								} : {
-									backgroundColor: "var(--ai-bubble)",
-									border: "1px solid var(--border-primary)"
-								})
-							}, [
-								createBaseVNode("div", _hoisted_13, [createBaseVNode("span", null, toDisplayString(entry.msg.role === "user" ? "User" : "AI Assistant"), 1), createBaseVNode("div", _hoisted_14, [shouldShowEditAction(entry) ? (openBlock(), createElementBlock("button", {
-									key: 0,
-									type: "button",
-									class: "message-inline-action-btn",
-									title: "編輯訊息",
-									"aria-label": "編輯訊息",
-									onClick: ($event) => emit("edit-message", entry.absoluteIndex)
-								}, " 編輯 ", 8, _hoisted_15)) : createCommentVNode("", true), shouldShowRegenerateAction(entry) ? (openBlock(), createElementBlock("button", {
-									key: 1,
-									type: "button",
-									class: "message-inline-action-btn",
-									title: "重新生成回覆",
-									"aria-label": "重新生成回覆",
-									onClick: ($event) => emit("regenerate-message", entry.absoluteIndex)
-								}, " 重新生成 ", 8, _hoisted_16)) : createCommentVNode("", true)])]),
-								createBaseVNode("div", {
-									class: normalizeClass(["message-content-shell", { "message-content-collapsed": shouldCollapseMessage(entry.msg) && !isExpanded(entry.messageKey) }]),
-									style: normalizeStyle({ "--collapsed-lines": String(collapsedLines) })
-								}, [createBaseVNode("div", {
-									class: "markdown-content leading-7 text-[15px]",
-									style: { "color": "var(--text-primary)" },
-									innerHTML: renderMarkdown(entry.msg.content)
-								}, null, 8, _hoisted_17), shouldCollapseMessage(entry.msg) && !isExpanded(entry.messageKey) ? (openBlock(), createElementBlock("div", _hoisted_18)) : createCommentVNode("", true)], 6),
-								shouldCollapseMessage(entry.msg) ? (openBlock(), createElementBlock("div", _hoisted_19, [createBaseVNode("button", {
-									type: "button",
-									class: "message-expand-btn",
-									onClick: ($event) => toggleExpand(entry.messageKey)
-								}, [(openBlock(), createElementBlock("svg", {
-									class: normalizeClass(["message-expand-icon", { "message-expand-icon-open": isExpanded(entry.messageKey) }]),
-									viewBox: "0 0 16 16",
-									fill: "currentColor"
-								}, [..._cache[11] || (_cache[11] = [createBaseVNode("path", { d: "M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z" }, null, -1)])], 2)), createBaseVNode("span", null, toDisplayString(isExpanded(entry.messageKey) ? "收合" : "展開完整輸出"), 1)], 8, _hoisted_20)])) : createCommentVNode("", true),
-								entry.msg.command ? (openBlock(), createElementBlock("div", _hoisted_21, [createVNode(ChatCommandRequest_default, {
-									command: entry.msg.command.content,
-									status: entry.msg.command.status,
-									disabled: Boolean(entry.msg.command.inFlight) || __props.isProcessing,
-									"created-at": entry.msg.command.createdAt,
-									"resolved-at": entry.msg.command.resolvedAt,
-									"expires-at": entry.msg.command.timeoutAt,
-									"ttl-seconds": unref(COMMAND_CONFIRM_TIMEOUT_SECONDS),
-									onConfirm: ($event) => emit("command-action", entry.msg, "confirm"),
-									onCancel: ($event) => emit("command-action", entry.msg, "cancel")
-								}, null, 8, [
-									"command",
-									"status",
-									"disabled",
-									"created-at",
-									"resolved-at",
-									"expires-at",
-									"ttl-seconds",
-									"onConfirm",
-									"onCancel"
-								])])) : createCommentVNode("", true),
-								entry.msg.aborted ? (openBlock(), createElementBlock("div", _hoisted_22, [..._cache[12] || (_cache[12] = [createBaseVNode("svg", {
-									xmlns: "http://www.w3.org/2000/svg",
-									width: "12",
-									height: "12",
-									viewBox: "0 0 24 24",
-									fill: "none",
-									stroke: "currentColor",
-									"stroke-width": "2.5",
-									"stroke-linecap": "round",
-									"stroke-linejoin": "round"
-								}, [
-									createBaseVNode("circle", {
-										cx: "12",
-										cy: "12",
-										r: "10"
-									}),
-									createBaseVNode("line", {
-										x1: "15",
-										y1: "9",
-										x2: "9",
-										y2: "15"
-									}),
-									createBaseVNode("line", {
-										x1: "9",
-										y1: "9",
-										x2: "15",
-										y2: "15"
-									})
-								], -1), createTextVNode(" 已中斷回應 ", -1)])])) : createCommentVNode("", true)
-							], 44, _hoisted_12),
-							!isTouchDevice.value ? (openBlock(), createElementBlock("button", {
-								key: 0,
-								onClick: ($event) => copyToClipboard(entry.msg.content, $event),
-								class: "mt-2 p-1.5 rounded-lg transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100",
-								style: { "color": "var(--text-tertiary)" },
-								title: "複製內容",
-								"aria-label": "複製訊息內容"
-							}, [..._cache[13] || (_cache[13] = [createBaseVNode("svg", {
-								xmlns: "http://www.w3.org/2000/svg",
-								class: "h-4 w-4",
-								fill: "none",
-								viewBox: "0 0 24 24",
-								stroke: "currentColor"
-							}, [createBaseVNode("path", {
-								"stroke-linecap": "round",
-								"stroke-linejoin": "round",
-								"stroke-width": "2",
-								d: "M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-							})], -1)])], 8, _hoisted_23)) : createCommentVNode("", true)
-						], 10, _hoisted_9);
-					}), 128)),
-					__props.isProcessing ? (openBlock(), createElementBlock("div", _hoisted_24, [..._cache[14] || (_cache[14] = [createStaticVNode("<div class=\"flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center overflow-hidden select-none shadow-sm\"><span class=\"text-xs font-bold text-white\">AI</span></div><div class=\"rounded-2xl p-4 border flex items-center gap-1.5 shadow-sm\" style=\"background-color:var(--ai-bubble);border-color:var(--border-primary);\"><div class=\"w-2 h-2 rounded-full animate-bounce\" style=\"background-color:var(--text-tertiary);\"></div><div class=\"w-2 h-2 rounded-full animate-bounce [animation-delay:75ms]\" style=\"background-color:var(--text-tertiary);\"></div><div class=\"w-2 h-2 rounded-full animate-bounce [animation-delay:150ms]\" style=\"background-color:var(--text-tertiary);\"></div></div>", 2)])])) : createCommentVNode("", true)
-				], 512),
+							key: visibleMessagesWithKeys.value[virtualRow.index].messageKey,
+							ref_for: true,
+							ref: measureElement,
+							"data-index": virtualRow.index,
+							class: "virtual-message-row",
+							style: normalizeStyle({
+								position: "absolute",
+								top: 0,
+								left: 0,
+								width: "100%",
+								transform: `translateY(${virtualRow.start}px)`
+							})
+						}, [createVNode(MessageItem_default, {
+							entry: visibleMessagesWithKeys.value[virtualRow.index],
+							"is-processing": __props.isProcessing,
+							"is-touch-device": isTouchDevice.value,
+							"can-regenerate-message": __props.canRegenerateMessage,
+							"collapsed-lines": collapsedLines,
+							"is-expanded": isExpanded(visibleMessagesWithKeys.value[virtualRow.index].messageKey),
+							"rendered-html": unref(renderMarkdown)(visibleMessagesWithKeys.value[virtualRow.index].msg.content),
+							"should-collapse": shouldCollapseMessage(visibleMessagesWithKeys.value[virtualRow.index].msg),
+							"available-models": __props.availableModels,
+							onCommandAction: _cache[1] || (_cache[1] = (msg, action) => emit("command-action", msg, action)),
+							onEditMessage: _cache[2] || (_cache[2] = (idx) => emit("edit-message", idx)),
+							onRegenerateMessage: _cache[3] || (_cache[3] = (idx) => emit("regenerate-message", idx)),
+							onToggleExpand: toggleExpand,
+							onSwitchModel: handleSwitchModel,
+							onTouchStart: handleMessageTouchStart,
+							onTouchMove: handleMessageTouchMove,
+							onTouchEnd: handleMessageTouchEnd,
+							onCopy: copyToClipboard
+						}, null, 8, [
+							"entry",
+							"is-processing",
+							"is-touch-device",
+							"can-regenerate-message",
+							"is-expanded",
+							"rendered-html",
+							"should-collapse",
+							"available-models"
+						])], 12, _hoisted_14);
+					}), 128))], 4)) : createCommentVNode("", true),
+					showTypingIndicator.value ? (openBlock(), createElementBlock("div", _hoisted_15, [_cache[20] || (_cache[20] = createBaseVNode("div", { class: "flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center overflow-hidden select-none shadow-sm" }, [createBaseVNode("span", { class: "text-xs font-bold text-white" }, "AI")], -1)), createBaseVNode("div", _hoisted_16, [_cache[19] || (_cache[19] = createBaseVNode("div", { class: "flex items-center gap-1.5" }, [
+						createBaseVNode("div", {
+							class: "w-2 h-2 rounded-full animate-bounce",
+							style: { "background-color": "var(--text-tertiary)" }
+						}),
+						createBaseVNode("div", {
+							class: "w-2 h-2 rounded-full animate-bounce [animation-delay:75ms]",
+							style: { "background-color": "var(--text-tertiary)" }
+						}),
+						createBaseVNode("div", {
+							class: "w-2 h-2 rounded-full animate-bounce [animation-delay:150ms]",
+							style: { "background-color": "var(--text-tertiary)" }
+						})
+					], -1)), createBaseVNode("span", _hoisted_17, toDisplayString(typingIndicatorText.value), 1)])])) : createCommentVNode("", true)
+				], 64))], 512),
 				createVNode(Transition, { name: "message-action-menu" }, {
 					default: withCtx(() => [messageActionMenu.value.visible ? (openBlock(), createElementBlock("div", {
 						key: 0,
@@ -3455,7 +4372,7 @@ var _sfc_main$2 = {
 						role: "dialog",
 						"aria-modal": "true",
 						"aria-label": "訊息操作選單",
-						onClick: _cache[0] || (_cache[0] = withModifiers(() => {}, ["stop"]))
+						onClick: _cache[4] || (_cache[4] = withModifiers(() => {}, ["stop"]))
 					}, [
 						createBaseVNode("button", {
 							type: "button",
@@ -3480,7 +4397,7 @@ var _sfc_main$2 = {
 						key: 0,
 						ref: bindRetryBannerRef,
 						class: "retry-countdown-banner"
-					}, [createBaseVNode("div", _hoisted_25, [createBaseVNode("span", _hoisted_26, toDisplayString(__props.statusMessage), 1), createBaseVNode("div", {
+					}, [createBaseVNode("div", _hoisted_18, [createBaseVNode("span", _hoisted_19, toDisplayString(__props.statusMessage), 1), createBaseVNode("div", {
 						class: "retry-progress-track",
 						role: "progressbar",
 						"aria-valuemin": "0",
@@ -3489,16 +4406,16 @@ var _sfc_main$2 = {
 					}, [createBaseVNode("div", {
 						class: "retry-progress-fill",
 						style: normalizeStyle({ width: `${retryProgressPercent.value}%` })
-					}, null, 4)], 8, _hoisted_27)]), createBaseVNode("div", _hoisted_28, [__props.onRetry ? (openBlock(), createElementBlock("button", {
+					}, null, 4)], 8, _hoisted_20)]), createBaseVNode("div", _hoisted_21, [__props.onRetry ? (openBlock(), createElementBlock("button", {
 						key: 0,
 						type: "button",
 						class: "retry-now-btn",
-						onClick: _cache[1] || (_cache[1] = (...args) => __props.onRetry && __props.onRetry(...args))
+						onClick: _cache[5] || (_cache[5] = (...args) => __props.onRetry && __props.onRetry(...args))
 					}, "立即重試")) : createCommentVNode("", true), __props.onCancelRetry ? (openBlock(), createElementBlock("button", {
 						key: 1,
 						type: "button",
 						class: "retry-cancel-btn",
-						onClick: _cache[2] || (_cache[2] = (...args) => __props.onCancelRetry && __props.onCancelRetry(...args))
+						onClick: _cache[6] || (_cache[6] = (...args) => __props.onCancelRetry && __props.onCancelRetry(...args))
 					}, "取消")) : createCommentVNode("", true)])])) : createCommentVNode("", true)]),
 					_: 1
 				}),
@@ -3510,7 +4427,7 @@ var _sfc_main$2 = {
 						class: "jump-to-bottom-btn",
 						title: "返回最新訊息",
 						"aria-label": "返回最新訊息"
-					}, [..._cache[15] || (_cache[15] = [createBaseVNode("svg", {
+					}, [..._cache[21] || (_cache[21] = [createBaseVNode("svg", {
 						xmlns: "http://www.w3.org/2000/svg",
 						width: "16",
 						height: "16",
@@ -3523,19 +4440,19 @@ var _sfc_main$2 = {
 					}, [createBaseVNode("path", { d: "M12 5v14M5 12l7 7 7-7" })], -1), createBaseVNode("span", null, "返回最新訊息", -1)])])) : createCommentVNode("", true)]),
 					_: 1
 				}),
-				createBaseVNode("footer", _hoisted_29, [createVNode(ControlPanel_default, {
+				createBaseVNode("footer", _hoisted_22, [createVNode(ControlPanel_default, {
 					model: __props.model,
-					"onUpdate:model": _cache[3] || (_cache[3] = (val) => emit("update:model", val)),
+					"onUpdate:model": _cache[7] || (_cache[7] = (val) => emit("update:model", val)),
 					availableModels: __props.availableModels,
 					isAdmin: __props.isAdmin,
 					isOnline: __props.isOnline,
 					userInput: __props.userInput,
-					"onUpdate:userInput": _cache[4] || (_cache[4] = (val) => emit("update:userInput", val)),
+					"onUpdate:userInput": _cache[8] || (_cache[8] = (val) => emit("update:userInput", val)),
 					isProcessing: __props.isProcessing,
 					statusMessage: __props.isRetrying ? "" : __props.statusMessage,
 					onComposerResize: handleComposerResize,
 					onSend: handleComposerSend,
-					onStop: _cache[5] || (_cache[5] = ($event) => emit("stop"))
+					onStop: _cache[9] || (_cache[9] = ($event) => emit("stop"))
 				}, null, 8, [
 					"model",
 					"availableModels",
@@ -3544,7 +4461,7 @@ var _sfc_main$2 = {
 					"userInput",
 					"isProcessing",
 					"statusMessage"
-				]), _cache[16] || (_cache[16] = createBaseVNode("p", {
+				]), _cache[22] || (_cache[22] = createBaseVNode("p", {
 					class: "text-[10px] text-center mt-3",
 					style: { "color": "var(--text-tertiary)" }
 				}, "Groq x Spring AI", -1))])
@@ -3573,6 +4490,14 @@ var _hoisted_3$1 = {
 		"border-color": "color-mix(in srgb, var(--accent-primary) 30%, transparent)"
 	}
 };
+var _hoisted_4$1 = {
+	key: 0,
+	class: "pending-cmd-banner",
+	role: "alert",
+	"aria-live": "polite",
+	"aria-atomic": "true"
+};
+var _hoisted_5 = { class: "pending-cmd-banner-cmd" };
 var _sfc_main$1 = {
 	__name: "ChatInterfaceLayout",
 	props: {
@@ -3583,6 +4508,10 @@ var _sfc_main$1 = {
 		isSidebarOpen: {
 			type: Boolean,
 			required: true
+		},
+		isConversationsLoading: {
+			type: Boolean,
+			default: false
 		},
 		conversations: {
 			type: Array,
@@ -3640,6 +4569,10 @@ var _sfc_main$1 = {
 			type: Boolean,
 			default: false
 		},
+		toolCallStatus: {
+			type: String,
+			default: null
+		},
 		retryCountdown: {
 			type: Object,
 			default: () => ({})
@@ -3661,6 +4594,10 @@ var _sfc_main$1 = {
 			default: false
 		},
 		isHistoryLoading: {
+			type: Boolean,
+			default: false
+		},
+		historyLoadFailed: {
 			type: Boolean,
 			default: false
 		},
@@ -3689,20 +4626,39 @@ var _sfc_main$1 = {
 		"stop",
 		"edit-message",
 		"regenerate-message",
-		"load-more"
+		"load-more",
+		"retry-history"
 	],
-	setup(__props, { expose: __expose, emit: __emit }) {
+	setup(__props, { expose: __expose }) {
 		const sidebarRef = ref(null);
+		const messageListRef = ref(null);
 		__expose({ focusSearchInput() {
 			return sidebarRef.value?.focusSearchInput?.();
 		} });
+		const props = __props;
+		const pendingCommandMsg = computed(() => {
+			if (!props.messages) return null;
+			for (let i = props.messages.length - 1; i >= 0; i--) {
+				const msg = props.messages[i];
+				if (msg?.command?.status === "pending") return msg;
+			}
+			return null;
+		});
+		const pendingCommandPreview = computed(() => {
+			const cmd = pendingCommandMsg.value?.command?.content;
+			if (!cmd) return "";
+			return cmd.length > 40 ? cmd.slice(0, 38) + "…" : cmd;
+		});
+		function jumpToPendingCommand() {
+			messageListRef.value?.scrollToPendingCommand();
+		}
 		return (_ctx, _cache) => {
 			return openBlock(), createElementBlock("div", {
 				class: "flex h-full overflow-hidden relative",
-				onTouchstartPassive: _cache[16] || (_cache[16] = ($event) => _ctx.$emit("touchstart", $event)),
-				onTouchmovePassive: _cache[17] || (_cache[17] = ($event) => _ctx.$emit("touchmove", $event)),
-				onTouchend: _cache[18] || (_cache[18] = ($event) => _ctx.$emit("touchend", $event)),
-				onTouchcancel: _cache[19] || (_cache[19] = ($event) => _ctx.$emit("touchcancel", $event))
+				onTouchstartPassive: _cache[17] || (_cache[17] = ($event) => _ctx.$emit("touchstart", $event)),
+				onTouchmovePassive: _cache[18] || (_cache[18] = ($event) => _ctx.$emit("touchmove", $event)),
+				onTouchend: _cache[19] || (_cache[19] = ($event) => _ctx.$emit("touchend", $event)),
+				onTouchcancel: _cache[20] || (_cache[20] = ($event) => _ctx.$emit("touchcancel", $event))
 			}, [
 				createVNode(Transition, { name: "sidebar-backdrop" }, {
 					default: withCtx(() => [__props.isMobileViewport && __props.isSidebarOpen ? (openBlock(), createElementBlock("button", {
@@ -3719,6 +4675,7 @@ var _sfc_main$1 = {
 					ref: sidebarRef,
 					class: normalizeClass(__props.isMobileViewport ? "mobile-sidebar-panel absolute inset-y-0 left-0 z-40 shadow-2xl" : ""),
 					isOpen: __props.isSidebarOpen,
+					loading: __props.isConversationsLoading,
 					conversations: __props.conversations,
 					currentId: __props.currentConversationId,
 					onNewChat: _cache[1] || (_cache[1] = ($event) => _ctx.$emit("new-chat")),
@@ -3728,104 +4685,131 @@ var _sfc_main$1 = {
 				}, null, 8, [
 					"class",
 					"isOpen",
+					"loading",
 					"conversations",
 					"currentId"
 				]),
-				createBaseVNode("div", _hoisted_1$1, [createVNode(ChatHeader_default, {
-					ip: __props.serverIp,
-					isOnline: __props.isOnline,
-					onToggleSidebar: _cache[7] || (_cache[7] = ($event) => _ctx.$emit("toggle-sidebar"))
-				}, {
-					"model-name": withCtx(() => [
-						createBaseVNode("span", _hoisted_2$1, toDisplayString(__props.displayModelName), 1),
-						createBaseVNode("span", _hoisted_3$1, toDisplayString(__props.currentUser), 1),
-						__props.isAdmin ? (openBlock(), createElementBlock("button", {
-							key: 0,
-							onClick: _cache[5] || (_cache[5] = ($event) => _ctx.$emit("open-admin")),
-							class: "ml-2 text-xs px-2.5 py-1 rounded-full border transition-all hover:scale-105",
+				createBaseVNode("div", _hoisted_1$1, [
+					createVNode(ChatHeader_default, {
+						ip: __props.serverIp,
+						isOnline: __props.isOnline,
+						onToggleSidebar: _cache[7] || (_cache[7] = ($event) => _ctx.$emit("toggle-sidebar"))
+					}, {
+						"model-name": withCtx(() => [
+							createBaseVNode("span", _hoisted_2$1, toDisplayString(__props.displayModelName), 1),
+							createBaseVNode("span", _hoisted_3$1, toDisplayString(__props.currentUser), 1),
+							__props.isAdmin ? (openBlock(), createElementBlock("button", {
+								key: 0,
+								onClick: _cache[5] || (_cache[5] = ($event) => _ctx.$emit("open-admin")),
+								class: "ml-2 text-xs px-2.5 py-1 rounded-full border transition-all hover:scale-105",
+								style: {
+									"background-color": "var(--bg-secondary)",
+									"color": "var(--text-secondary)",
+									"border-color": "var(--border-primary)"
+								},
+								"aria-label": "開啟管理面板"
+							}, " Admin ")) : createCommentVNode("", true)
+						]),
+						actions: withCtx(() => [createBaseVNode("button", {
+							onClick: _cache[6] || (_cache[6] = ($event) => _ctx.$emit("logout")),
+							class: "flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border transition-all group",
 							style: {
 								"background-color": "var(--bg-secondary)",
-								"color": "var(--text-secondary)",
+								"color": "var(--text-primary)",
 								"border-color": "var(--border-primary)"
 							},
-							"aria-label": "開啟管理面板"
-						}, " Admin ")) : createCommentVNode("", true)
-					]),
-					actions: withCtx(() => [createBaseVNode("button", {
-						onClick: _cache[6] || (_cache[6] = ($event) => _ctx.$emit("logout")),
-						class: "flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border transition-all group",
-						style: {
-							"background-color": "var(--bg-secondary)",
-							"color": "var(--text-primary)",
-							"border-color": "var(--border-primary)"
-						},
-						title: "登出系統",
-						"aria-label": "登出系統"
-					}, [..._cache[20] || (_cache[20] = [createBaseVNode("span", null, "登出", -1), createBaseVNode("svg", {
-						xmlns: "http://www.w3.org/2000/svg",
-						class: "h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5",
-						fill: "none",
-						viewBox: "0 0 24 24",
-						stroke: "currentColor"
-					}, [createBaseVNode("path", {
-						"stroke-linecap": "round",
-						"stroke-linejoin": "round",
-						"stroke-width": "2",
-						d: "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-					})], -1)])])]),
-					_: 1
-				}, 8, ["ip", "isOnline"]), createVNode(MessageList_default, {
-					class: "flex-1 min-h-0",
-					messages: __props.messages,
-					isProcessing: __props.isProcessing,
-					isAdmin: __props.isAdmin,
-					isOnline: __props.isOnline,
-					onCommandAction: _cache[8] || (_cache[8] = (msg, action) => _ctx.$emit("command-action", {
-						msg,
-						action
-					})),
-					userInput: __props.userInput,
-					"onUpdate:userInput": _cache[9] || (_cache[9] = ($event) => _ctx.$emit("update:userInput", $event)),
-					model: __props.model,
-					"onUpdate:model": _cache[10] || (_cache[10] = ($event) => _ctx.$emit("update:model", $event)),
-					availableModels: __props.availableModels,
-					statusMessage: __props.statusMessage,
-					isRetrying: __props.isRetrying,
-					retryCountdown: __props.retryCountdown,
-					onRetry: __props.onRetry,
-					onCancelRetry: __props.onCancelRetry,
-					canRegenerateMessage: __props.canRegenerateMessage,
-					hasMoreFromServer: __props.hasMoreFromServer,
-					isHistoryLoading: __props.isHistoryLoading,
-					isLoadingMore: __props.isLoadingMore,
-					onSend: _cache[11] || (_cache[11] = ($event) => _ctx.$emit("send", $event)),
-					onStop: _cache[12] || (_cache[12] = ($event) => _ctx.$emit("stop")),
-					onEditMessage: _cache[13] || (_cache[13] = ($event) => _ctx.$emit("edit-message", $event)),
-					onRegenerateMessage: _cache[14] || (_cache[14] = ($event) => _ctx.$emit("regenerate-message", $event)),
-					onLoadMore: _cache[15] || (_cache[15] = ($event) => _ctx.$emit("load-more"))
-				}, null, 8, [
-					"messages",
-					"isProcessing",
-					"isAdmin",
-					"isOnline",
-					"userInput",
-					"model",
-					"availableModels",
-					"statusMessage",
-					"isRetrying",
-					"retryCountdown",
-					"onRetry",
-					"onCancelRetry",
-					"canRegenerateMessage",
-					"hasMoreFromServer",
-					"isHistoryLoading",
-					"isLoadingMore"
-				])])
+							title: "登出系統",
+							"aria-label": "登出系統"
+						}, [..._cache[21] || (_cache[21] = [createBaseVNode("span", null, "登出", -1), createBaseVNode("svg", {
+							xmlns: "http://www.w3.org/2000/svg",
+							class: "h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5",
+							fill: "none",
+							viewBox: "0 0 24 24",
+							stroke: "currentColor"
+						}, [createBaseVNode("path", {
+							"stroke-linecap": "round",
+							"stroke-linejoin": "round",
+							"stroke-width": "2",
+							d: "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+						})], -1)])])]),
+						_: 1
+					}, 8, ["ip", "isOnline"]),
+					createVNode(Transition, { name: "pending-banner" }, {
+						default: withCtx(() => [pendingCommandMsg.value ? (openBlock(), createElementBlock("div", _hoisted_4$1, [
+							_cache[22] || (_cache[22] = createBaseVNode("span", {
+								class: "pending-cmd-banner-icon",
+								"aria-hidden": "true"
+							}, "⚠️", -1)),
+							_cache[23] || (_cache[23] = createBaseVNode("span", { class: "pending-cmd-banner-text" }, "有待確認的高風險指令：", -1)),
+							createBaseVNode("code", _hoisted_5, toDisplayString(pendingCommandPreview.value), 1),
+							createBaseVNode("button", {
+								type: "button",
+								class: "pending-cmd-banner-jump",
+								onClick: jumpToPendingCommand
+							}, " 跳轉確認 → ")
+						])) : createCommentVNode("", true)]),
+						_: 1
+					}),
+					createVNode(MessageList_default, {
+						ref_key: "messageListRef",
+						ref: messageListRef,
+						class: "flex-1 min-h-0",
+						messages: __props.messages,
+						isProcessing: __props.isProcessing,
+						isAdmin: __props.isAdmin,
+						isOnline: __props.isOnline,
+						onCommandAction: _cache[8] || (_cache[8] = (msg, action) => _ctx.$emit("command-action", {
+							msg,
+							action
+						})),
+						userInput: __props.userInput,
+						"onUpdate:userInput": _cache[9] || (_cache[9] = ($event) => _ctx.$emit("update:userInput", $event)),
+						model: __props.model,
+						"onUpdate:model": _cache[10] || (_cache[10] = ($event) => _ctx.$emit("update:model", $event)),
+						availableModels: __props.availableModels,
+						statusMessage: __props.statusMessage,
+						isRetrying: __props.isRetrying,
+						toolCallStatus: __props.toolCallStatus,
+						retryCountdown: __props.retryCountdown,
+						onRetry: __props.onRetry,
+						onCancelRetry: __props.onCancelRetry,
+						canRegenerateMessage: __props.canRegenerateMessage,
+						hasMoreFromServer: __props.hasMoreFromServer,
+						isHistoryLoading: __props.isHistoryLoading,
+						historyLoadFailed: __props.historyLoadFailed,
+						isLoadingMore: __props.isLoadingMore,
+						onSend: _cache[11] || (_cache[11] = ($event) => _ctx.$emit("send", $event)),
+						onStop: _cache[12] || (_cache[12] = ($event) => _ctx.$emit("stop")),
+						onEditMessage: _cache[13] || (_cache[13] = ($event) => _ctx.$emit("edit-message", $event)),
+						onRegenerateMessage: _cache[14] || (_cache[14] = ($event) => _ctx.$emit("regenerate-message", $event)),
+						onLoadMore: _cache[15] || (_cache[15] = ($event) => _ctx.$emit("load-more")),
+						onRetryHistory: _cache[16] || (_cache[16] = ($event) => _ctx.$emit("retry-history"))
+					}, null, 8, [
+						"messages",
+						"isProcessing",
+						"isAdmin",
+						"isOnline",
+						"userInput",
+						"model",
+						"availableModels",
+						"statusMessage",
+						"isRetrying",
+						"toolCallStatus",
+						"retryCountdown",
+						"onRetry",
+						"onCancelRetry",
+						"canRegenerateMessage",
+						"hasMoreFromServer",
+						"isHistoryLoading",
+						"historyLoadFailed",
+						"isLoadingMore"
+					])
+				])
 			], 32);
 		};
 	}
 };
-var ChatInterfaceLayout_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$1, [["__scopeId", "data-v-f400d99b"]]);
+var ChatInterfaceLayout_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$1, [["__scopeId", "data-v-62491a57"]]);
 
 //#endregion
 //#region src/stores/systemStore.js
@@ -4061,6 +5045,7 @@ function hydrateMessageWithCommand(rawMessage) {
 //#endregion
 //#region src/stores/chatStore.js
 var MODEL_PREFERENCE_STORAGE_KEY = "server-assistant:model-preference";
+var DRAFT_STORAGE_KEY_PREFIX = "draft_";
 function readSavedModelPreference() {
 	if (typeof window === "undefined" || typeof window.localStorage === "undefined") return "";
 	try {
@@ -4080,6 +5065,39 @@ function persistModelPreference(modelKey) {
 		}
 		window.localStorage.removeItem(MODEL_PREFERENCE_STORAGE_KEY);
 	} catch {}
+}
+function readSavedDraft(conversationKey) {
+	if (typeof window === "undefined" || typeof window.localStorage === "undefined") return "";
+	try {
+		const saved = window.localStorage.getItem(getDraftStorageKey(conversationKey));
+		return typeof saved === "string" ? saved : "";
+	} catch {
+		return "";
+	}
+}
+function persistDraft(conversationKey, value) {
+	if (typeof window === "undefined" || typeof window.localStorage === "undefined") return;
+	try {
+		if (value) {
+			window.localStorage.setItem(getDraftStorageKey(conversationKey), value);
+			return;
+		}
+		window.localStorage.removeItem(getDraftStorageKey(conversationKey));
+	} catch {}
+}
+function clearPersistedDrafts() {
+	if (typeof window === "undefined" || typeof window.localStorage === "undefined") return;
+	try {
+		const keysToRemove = [];
+		for (let index = 0; index < window.localStorage.length; index += 1) {
+			const storageKey = window.localStorage.key(index);
+			if (typeof storageKey === "string" && storageKey.startsWith(DRAFT_STORAGE_KEY_PREFIX)) keysToRemove.push(storageKey);
+		}
+		for (const storageKey of keysToRemove) window.localStorage.removeItem(storageKey);
+	} catch {}
+}
+function getDraftStorageKey(conversationKey) {
+	return `${DRAFT_STORAGE_KEY_PREFIX}${conversationKey}`;
 }
 /**
 * Chat Store
@@ -4111,6 +5129,7 @@ const useChatStore = defineStore("chat", () => {
 	const historyCursorCreatedAt = ref(null);
 	const historyCursorId = ref(null);
 	const pendingHistoryReloadConversationId = ref("");
+	const historyLoadFailed = ref(false);
 	const displayModelName = computed(() => {
 		const systemStore = useSystemStore();
 		if (systemStore.availableModels[model.value]) return systemStore.availableModels[model.value].label;
@@ -4122,6 +5141,7 @@ const useChatStore = defineStore("chat", () => {
 		hasMoreHistory.value = false;
 		isHistoryLoading.value = false;
 		isLoadingMore.value = false;
+		historyLoadFailed.value = false;
 		totalHistory.value = 0;
 		loadedHistoryCount.value = 0;
 		historyCursorCreatedAt.value = null;
@@ -4136,6 +5156,7 @@ const useChatStore = defineStore("chat", () => {
 	async function loadHistory(conversationId) {
 		if (!conversationId) return false;
 		isHistoryLoading.value = true;
+		historyLoadFailed.value = false;
 		messages.value = [];
 		hasMoreHistory.value = false;
 		totalHistory.value = 0;
@@ -4156,9 +5177,11 @@ const useChatStore = defineStore("chat", () => {
 				hasMoreHistory.value = hasRemainingHistory();
 				return true;
 			}
+			historyLoadFailed.value = true;
 			return false;
 		} catch (error) {
 			console.error("Load history error:", error);
+			historyLoadFailed.value = true;
 			if (shouldRetryHistoryWhenOnline(error)) pendingHistoryReloadConversationId.value = conversationId;
 			return false;
 		} finally {
@@ -4239,7 +5262,9 @@ const useChatStore = defineStore("chat", () => {
 	* @param {string} conversationId - Conversation ID
 	*/
 	function setActiveDraftConversation(conversationId) {
-		activeDraftConversationId.value = normalizeDraftConversationKey(conversationId);
+		const conversationKey = normalizeDraftConversationKey(conversationId);
+		activeDraftConversationId.value = conversationKey;
+		hydrateDraftForKey(conversationKey);
 	}
 	/**
 	* Get draft text for a specific conversation.
@@ -4248,6 +5273,7 @@ const useChatStore = defineStore("chat", () => {
 	*/
 	function getConversationDraft(conversationId) {
 		const key = normalizeDraftConversationKey(conversationId);
+		hydrateDraftForKey(key);
 		return draftByConversationId.value[key] ?? "";
 	}
 	/**
@@ -4275,17 +5301,25 @@ const useChatStore = defineStore("chat", () => {
 		const sourceKey = normalizeDraftConversationKey(sourceConversationId);
 		const targetKey = normalizeDraftConversationKey(targetConversationId);
 		if (sourceKey === targetKey) return;
+		hydrateDraftForKey(sourceKey);
 		const sourceDraft = draftByConversationId.value[sourceKey];
 		if (typeof sourceDraft !== "string") return;
 		const nextDrafts = { ...draftByConversationId.value };
-		if (sourceDraft.length > 0) nextDrafts[targetKey] = sourceDraft;
-		else delete nextDrafts[targetKey];
+		if (sourceDraft.length > 0) {
+			nextDrafts[targetKey] = sourceDraft;
+			persistDraft(targetKey, sourceDraft);
+		} else {
+			delete nextDrafts[targetKey];
+			persistDraft(targetKey, "");
+		}
 		delete nextDrafts[sourceKey];
+		persistDraft(sourceKey, "");
 		draftByConversationId.value = nextDrafts;
 	}
 	function clearAllDrafts() {
 		draftByConversationId.value = {};
 		activeDraftConversationId.value = NEW_CONVERSATION_DRAFT_KEY;
+		clearPersistedDrafts();
 	}
 	function hasValidCursor() {
 		return historyCursorCreatedAt.value !== null && historyCursorId.value !== null;
@@ -4319,6 +5353,7 @@ const useChatStore = defineStore("chat", () => {
 		const normalizedValue = typeof value === "string" ? value : "";
 		const currentValue = draftByConversationId.value[conversationKey];
 		if (!normalizedValue) {
+			persistDraft(conversationKey, "");
 			if (typeof currentValue !== "string") return;
 			const nextDrafts = { ...draftByConversationId.value };
 			delete nextDrafts[conversationKey];
@@ -4329,6 +5364,16 @@ const useChatStore = defineStore("chat", () => {
 		draftByConversationId.value = {
 			...draftByConversationId.value,
 			[conversationKey]: normalizedValue
+		};
+		persistDraft(conversationKey, normalizedValue);
+	}
+	function hydrateDraftForKey(conversationKey) {
+		if (typeof draftByConversationId.value[conversationKey] === "string") return;
+		const savedDraft = readSavedDraft(conversationKey);
+		if (!savedDraft) return;
+		draftByConversationId.value = {
+			...draftByConversationId.value,
+			[conversationKey]: savedDraft
 		};
 	}
 	watch(model, (nextModel) => {
@@ -4343,6 +5388,7 @@ const useChatStore = defineStore("chat", () => {
 		hasMoreHistory,
 		isHistoryLoading,
 		isLoadingMore,
+		historyLoadFailed,
 		totalHistory,
 		pendingHistoryReloadConversationId,
 		hasPendingHistoryReload,
@@ -4374,6 +5420,7 @@ const useConversationStore = defineStore("conversation", () => {
 	const conversations = ref([]);
 	const currentConversationId = ref("");
 	const isSidebarOpen = ref(true);
+	const isConversationsLoading = ref(true);
 	const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 	function normalizeConversations(result) {
 		if (Array.isArray(result)) return result;
@@ -4388,8 +5435,10 @@ const useConversationStore = defineStore("conversation", () => {
 			const parsed = normalizeConversations(await chatApi.getConversations());
 			if (parsed) {
 				conversations.value = parsed;
+				isConversationsLoading.value = false;
 				return parsed;
 			}
+			isConversationsLoading.value = false;
 			return conversations.value;
 		} catch (error) {
 			if (retry > 0) {
@@ -4397,6 +5446,7 @@ const useConversationStore = defineStore("conversation", () => {
 				return loadConversations(retry - 1);
 			}
 			console.error("Load conversations error:", error);
+			isConversationsLoading.value = false;
 			return conversations.value;
 		}
 	}
@@ -4435,6 +5485,7 @@ const useConversationStore = defineStore("conversation", () => {
 		conversations,
 		currentConversationId,
 		isSidebarOpen,
+		isConversationsLoading,
 		loadConversations,
 		selectConversation,
 		createNewConversation,
@@ -4449,6 +5500,7 @@ const useConversationStore = defineStore("conversation", () => {
 var MAX_RETRIES = 2;
 var RETRY_BASE_DELAY_MS = 1500;
 var RETRY_JITTER_MAX_MS = 3e3;
+var RETRY_DISPLAY_TOTAL_ATTEMPTS = MAX_RETRIES + 1;
 function extractErrorCode(payload) {
 	if (!payload || typeof payload !== "object") return null;
 	if (typeof payload.errorCode === "string" && payload.errorCode.trim()) return payload.errorCode;
@@ -4609,14 +5661,17 @@ function buildErrorMessage(type, attempt, delaySec = 0, options = {}) {
 		default: return "❌ 伺服器回應異常，請稍後再試。";
 	}
 }
-function buildRetryStatusMessage(classification, remainingSec, attempt) {
+function buildRetryStatusMessage(classification, remainingSec, attempt = 1, totalAttempts = RETRY_DISPLAY_TOTAL_ATTEMPTS) {
+	const safeAttempt = Number.isFinite(attempt) && attempt > 0 ? attempt : 1;
+	const retryProgressLabel = `正在重試（${safeAttempt}/${Number.isFinite(totalAttempts) && totalAttempts > 0 ? Math.max(totalAttempts, safeAttempt) : safeAttempt}）`;
+	if (classification.type === "network") return `連線不穩，${retryProgressLabel}... ${remainingSec} 秒後自動重試`;
 	if (classification.type === "rateLimit") {
-		if (classification.rateLimitReason === "user_rate_limit" || classification.rateLimitReason === "user_tpm_limit") return `您的請求太頻繁，請稍後 ${remainingSec} 秒`;
-		if (classification.rateLimitReason === "global_tpm_limit") return `系統目前繁忙，請稍後 ${remainingSec} 秒再試`;
-		if (classification.allKeysExhausted) return `目前 AI 服務繁忙，請等待 ${remainingSec} 秒後重試，或切換至其他模型`;
-		return `系統繁忙，將在 ${remainingSec} 秒後自動重試...`;
+		if (classification.rateLimitReason === "user_rate_limit" || classification.rateLimitReason === "user_tpm_limit") return `${retryProgressLabel}，您的請求太頻繁，${remainingSec} 秒後自動重試`;
+		if (classification.rateLimitReason === "global_tpm_limit") return `${retryProgressLabel}，系統目前繁忙，${remainingSec} 秒後自動重試`;
+		if (classification.allKeysExhausted) return `${retryProgressLabel}，目前 AI 服務繁忙，${remainingSec} 秒後自動重試，或切換至其他模型`;
+		return `${retryProgressLabel}，系統繁忙，將在 ${remainingSec} 秒後自動重試...`;
 	}
-	return `⏳ 連線重試中，${remainingSec} 秒後進行第 ${attempt} 次重試...`;
+	return `${retryProgressLabel}，${remainingSec} 秒後自動重試...`;
 }
 /**
 * Chat Composable
@@ -4640,6 +5695,8 @@ function useChat() {
 		remainingSec: 0,
 		totalSec: 0
 	});
+	/** Human-readable label shown in the typing indicator during tool execution. */
+	const toolCallStatus = ref(null);
 	let _skipDelayResolve = null;
 	function extractExclamationCommand(message) {
 		if (typeof message !== "string") return null;
@@ -4652,9 +5709,35 @@ function useChat() {
 	* @param {string} data - SSE event data payload (may contain newlines)
 	* @param {Object} aiMsgObj - AI message object to update
 	*/
+	const TOOL_CALL_LABELS = {
+		cmd: (detail) => `⚙️ 正在執行：${detail}`,
+		ls: (detail) => `⚙️ 正在列出：${detail}`,
+		read: (detail) => `⚙️ 正在讀取：${detail}`,
+		write: (detail) => `⚙️ 正在寫入：${detail}`,
+		mkdir: (detail) => `⚙️ 正在建立目錄：${detail}`,
+		users: (detail) => `⚙️ 管理使用者：${detail}`,
+		ssh: (detail) => `⚙️ 管理 SSH 金鑰：${detail}`
+	};
+	function parseToolCallStatus(raw) {
+		const callMatch = raw.match(/^\[STATUS:TOOL_CALL:([^:]+):(.+)\]$/);
+		if (callMatch) {
+			const type = callMatch[1];
+			const detail = callMatch[2];
+			const labelFn = TOOL_CALL_LABELS[type];
+			return labelFn ? labelFn(detail) : `⚙️ 正在執行工具：${detail}`;
+		}
+		if (raw.trim() === "[STATUS:TOOL_DONE]") return "✏️ 整理結果中...";
+		return null;
+	}
 	function processEventData(data, aiMsgObj) {
 		if (data == null) return;
-		if (data.trim().startsWith("[STATUS:")) return;
+		const trimmed = data.trim();
+		if (trimmed.startsWith("[STATUS:")) {
+			const label = parseToolCallStatus(trimmed);
+			if (label !== null) toolCallStatus.value = label;
+			return;
+		}
+		if (toolCallStatus.value !== null) toolCallStatus.value = null;
 		if (statusMessage.value) statusMessage.value = "";
 		aiMsgObj.content += data === "" ? "\n" : data;
 		const rateLimitMarker = extractRateLimitMarker(aiMsgObj.content);
@@ -4728,7 +5811,7 @@ function useChat() {
 					isAborted = true;
 					try {
 						await reader.cancel();
-					} catch (cancelError) {}
+					} catch {}
 					break;
 				}
 				const { value, done } = await reader.read();
@@ -4762,7 +5845,14 @@ function useChat() {
 				eventDataLines = [];
 			}
 			const hasCommand = aiMsgObj.command || hasPendingCommandMarker(aiMsgObj.content);
-			if ((!aiMsgObj.content || !aiMsgObj.content.trim()) && !hasCommand) aiMsgObj.content = "⚠️ (系統提示：AI 未回傳任何內容，請稍後再試或檢查後端日誌。)";
+			if ((!aiMsgObj.content || !aiMsgObj.content.trim()) && !hasCommand) {
+				aiMsgObj.content = "⚠️ AI 未能回應（空回應）";
+				aiMsgObj.emptyResponse = true;
+				aiMsgObj.errorType = "emptyResponse";
+			} else if (aiMsgObj.content && aiMsgObj.content.trim() === "⚠️ AI 未能回應（空回應）") {
+				aiMsgObj.emptyResponse = true;
+				aiMsgObj.errorType = "emptyResponse";
+			}
 		} catch (error) {
 			try {
 				await reader.cancel();
@@ -4794,6 +5884,7 @@ function useChat() {
 	function resetRetryIndicators() {
 		isRetrying.value = false;
 		statusMessage.value = "";
+		toolCallStatus.value = null;
 		retryCountdown.value = {
 			active: false,
 			type: "",
@@ -4810,6 +5901,7 @@ function useChat() {
 	async function sendWithRetry(params, aiMsgObj) {
 		resetRetryIndicators();
 		let boundedRetryAttempt = 0;
+		let retryDisplayAttempt = 0;
 		let lastRetryType = null;
 		const signal = abortController.value?.signal ?? null;
 		while (true) try {
@@ -4842,6 +5934,7 @@ function useChat() {
 					allKeysExhausted: classified.allKeysExhausted,
 					rateLimitReason: classified.rateLimitReason
 				});
+				aiMsgObj.errorType = classified.type;
 				resetRetryIndicators();
 				return {
 					status: "failed",
@@ -4851,12 +5944,14 @@ function useChat() {
 			if (!isRateLimit) boundedRetryAttempt++;
 			lastRetryType = classified.type;
 			const delaySec = Math.ceil(classified.delayMs / 1e3);
+			retryDisplayAttempt += 1;
+			const retryDisplayTotalAttempts = RETRY_DISPLAY_TOTAL_ATTEMPTS;
 			isRetrying.value = true;
 			const skipPromise = new Promise((resolve) => {
 				_skipDelayResolve = resolve;
 			});
 			countdownLoop: for (let remaining = delaySec; remaining > 0; remaining--) {
-				statusMessage.value = buildRetryStatusMessage(classified, remaining, boundedRetryAttempt);
+				statusMessage.value = buildRetryStatusMessage(classified, remaining, retryDisplayAttempt, retryDisplayTotalAttempts);
 				retryCountdown.value = {
 					active: true,
 					type: classified.type,
@@ -4884,10 +5979,7 @@ function useChat() {
 		const draftBeforeSend = useDraftInput ? userInput.value : "";
 		const msg = typeof content === "string" && content ? content : userInput.value.trim();
 		if (!msg || isProcessing.value) return;
-		if (msg.length > MAX_MESSAGE_LENGTH) {
-			statusMessage.value = `訊息過長（${msg.length} 字元），上限為 ${MAX_MESSAGE_LENGTH} 字元`;
-			return;
-		}
+		if (msg.length > MAX_MESSAGE_LENGTH) return;
 		const exclamationCommand = extractExclamationCommand(msg);
 		if (exclamationCommand !== null) {
 			if (!exclamationCommand) {
@@ -4918,7 +6010,8 @@ function useChat() {
 			content: msg
 		}, {
 			role: "ai",
-			content: ""
+			content: "",
+			modelKey: model.value
 		});
 		const aiMsgObj = messages.value[messages.value.length - 1];
 		abortController.value = new AbortController();
@@ -4937,6 +6030,7 @@ function useChat() {
 			isProcessing.value = false;
 			abortController.value = null;
 			statusMessage.value = "";
+			toolCallStatus.value = null;
 			if (isNewConversation) try {
 				await conversationStore.loadConversations();
 			} catch (error) {
@@ -4968,7 +6062,8 @@ function useChat() {
 		stopStreaming,
 		retryNow,
 		isRetrying,
-		retryCountdown
+		retryCountdown,
+		toolCallStatus
 	};
 }
 
@@ -5192,36 +6287,18 @@ function useKeyboardShortcuts({ sidebarRef, onNewChat } = {}) {
 //#region src/composables/useModelSwitchToast.js
 var MODEL_SWITCH_TOAST_DURATION_MS = 2200;
 function useModelSwitchToast() {
-	const showModelSwitchToast = ref(false);
-	const modelSwitchToastMessage = ref("");
-	let modelSwitchToastTimeoutId = null;
+	const { info } = useToastQueue();
 	const suppressNextModelSwitchToast = ref(false);
-	function hideModelSwitchToast() {
-		if (modelSwitchToastTimeoutId !== null) {
-			window.clearTimeout(modelSwitchToastTimeoutId);
-			modelSwitchToastTimeoutId = null;
-		}
-		showModelSwitchToast.value = false;
-		modelSwitchToastMessage.value = "";
-	}
 	function triggerModelSwitchToast(message) {
 		if (typeof message !== "string") return;
 		const normalizedMessage = message.trim();
 		if (!normalizedMessage) return;
-		if (modelSwitchToastTimeoutId !== null) {
-			window.clearTimeout(modelSwitchToastTimeoutId);
-			modelSwitchToastTimeoutId = null;
-		}
-		modelSwitchToastMessage.value = normalizedMessage;
-		showModelSwitchToast.value = true;
-		modelSwitchToastTimeoutId = window.setTimeout(() => {
-			showModelSwitchToast.value = false;
-			modelSwitchToastTimeoutId = null;
-		}, MODEL_SWITCH_TOAST_DURATION_MS);
+		info(normalizedMessage, MODEL_SWITCH_TOAST_DURATION_MS);
 	}
+	function hideModelSwitchToast() {}
 	return {
-		showModelSwitchToast,
-		modelSwitchToastMessage,
+		showModelSwitchToast: ref(false),
+		modelSwitchToastMessage: ref(""),
 		suppressNextModelSwitchToast,
 		hideModelSwitchToast,
 		triggerModelSwitchToast
@@ -5232,10 +6309,15 @@ function useModelSwitchToast() {
 //#region src/composables/useCommandConfirmation.js
 var COMMAND_CONFIRM_TIMEOUT_MS = COMMAND_CONFIRM_TIMEOUT_SECONDS * 1e3;
 var COMMAND_TIMEOUT_MESSAGE = "已逾時，指令已取消";
+var COMMAND_TIMEOUT_TOAST_MESSAGE = "⚠️ 指令確認逾時，已自動取消";
+var OFFLOAD_POLL_FAILURE_TOAST_MESSAGE = "❌ Offload 進度查詢失敗，請稍後再試";
+var COMMAND_JOB_POLL_FAILURE_TOAST_MESSAGE = "❌ 背景命令進度查詢失敗，請稍後再試";
+var POLL_FAILURE_TOAST_DURATION_MS = 4500;
 function useCommandConfirmation() {
 	const chatStore = useChatStore();
 	const conversationStore = useConversationStore();
 	const systemStore = useSystemStore();
+	const { info: showInfoToast } = useToastQueue();
 	const { messages, isProcessing } = storeToRefs(chatStore);
 	const { currentConversationId } = storeToRefs(conversationStore);
 	const commandTimeoutHandles = /* @__PURE__ */ new Map();
@@ -5259,10 +6341,18 @@ function useCommandConfirmation() {
 		offloadPollToken++;
 		commandJobPollToken++;
 	}
+	function markCommandAsPending(msg, { resetCreatedAt = false } = {}) {
+		if (!msg?.command) return;
+		msg.command.status = "pending";
+		if (resetCreatedAt) msg.command.createdAt = Date.now();
+		delete msg.command.resolvedAt;
+		msg.command.timeoutAt = Date.now() + COMMAND_CONFIRM_TIMEOUT_MS;
+		msg.command.conversationId = currentConversationId.value || null;
+	}
 	async function autoCancelTimedOutCommand(msg) {
 		if (!msg?.command || msg.command.status !== "pending" || msg.command.inFlight) return;
 		const timeoutConversationId = msg.command.conversationId ?? null;
-		msg.command.status = "cancelled";
+		msg.command.status = "expired";
 		msg.command.resolvedAt = Date.now();
 		delete msg.command.timeoutAt;
 		delete msg.command.conversationId;
@@ -5271,6 +6361,7 @@ function useCommandConfirmation() {
 			role: "ai",
 			content: COMMAND_TIMEOUT_MESSAGE
 		});
+		showInfoToast(COMMAND_TIMEOUT_TOAST_MESSAGE);
 		try {
 			await httpClient_default.post("/ai/cancel-command", {
 				conversationId: timeoutConversationId,
@@ -5315,7 +6406,10 @@ function useCommandConfirmation() {
 				await sleep(1e3);
 			}
 		} catch (e) {
-			if (pollToken === offloadPollToken) aiMsg.content = "❌ Offload 進度查詢失敗: " + (e.message || "未知錯誤");
+			if (pollToken === offloadPollToken) {
+				aiMsg.content = "❌ Offload 進度查詢失敗: " + (e.message || "未知錯誤");
+				showPollFailureToast(OFFLOAD_POLL_FAILURE_TOAST_MESSAGE, e);
+			}
 		} finally {
 			if (pollToken === offloadPollToken) systemStore.clearStatusMessage();
 		}
@@ -5333,22 +6427,43 @@ function useCommandConfirmation() {
 				await sleep(1e3);
 			}
 		} catch (e) {
-			if (pollToken === commandJobPollToken) aiMsg.content = "❌ 背景命令進度查詢失敗: " + (e.message || "未知錯誤");
+			if (pollToken === commandJobPollToken) {
+				aiMsg.content = "❌ 背景命令進度查詢失敗: " + (e.message || "未知錯誤");
+				showPollFailureToast(COMMAND_JOB_POLL_FAILURE_TOAST_MESSAGE, e);
+			}
 		} finally {
 			if (pollToken === commandJobPollToken) systemStore.clearStatusMessage();
 		}
+	}
+	function showPollFailureToast(baseMessage, error) {
+		if (typeof baseMessage !== "string" || !baseMessage.trim()) return;
+		const reason = typeof error?.message === "string" ? error.message.trim() : "";
+		if (reason) {
+			showInfoToast(`${baseMessage}（${reason}）`, POLL_FAILURE_TOAST_DURATION_MS);
+			return;
+		}
+		showInfoToast(baseMessage, POLL_FAILURE_TOAST_DURATION_MS);
 	}
 	/**
 	* Handle command action (confirm/cancel)
 	* Confirmation calls the backend directly to bypass AI model unreliability.
 	*/
 	async function handleCommandAction(msg, action) {
-		if (!msg.command || msg.command.status !== "pending") return;
+		if (!msg?.command) return;
+		if (action === "resend") {
+			if (msg.command.status !== "expired") return;
+			if (isProcessing.value || msg.command.inFlight) return;
+			markCommandAsPending(msg, { resetCreatedAt: true });
+			schedulePendingCommandTimeout(msg, { resetDeadline: true });
+			return;
+		}
+		if (msg.command.status !== "pending") return;
 		if (isProcessing.value || msg.command.inFlight) return;
 		clearCommandTimeout(msg);
 		msg.command.inFlight = true;
 		if (action === "confirm") {
 			isProcessing.value = true;
+			msg.command.status = "executing";
 			messages.value.push({
 				role: "ai",
 				content: ""
@@ -5377,14 +6492,14 @@ function useCommandConfirmation() {
 					pollCommandJobProgress(commandJobId, aiMsg, pollToken);
 				} else aiMsg.content = backendMessage;
 			} catch (e) {
-				msg.command.status = "pending";
-				delete msg.command.resolvedAt;
-				msg.command.timeoutAt = Date.now() + COMMAND_CONFIRM_TIMEOUT_MS;
+				msg.command.status = "failed";
+				msg.command.resolvedAt = Date.now();
+				delete msg.command.timeoutAt;
+				delete msg.command.conversationId;
 				aiMsg.content = "❌ 執行失敗: " + (e.message || "未知錯誤");
 			} finally {
 				isProcessing.value = false;
 				msg.command.inFlight = false;
-				if (msg.command.status === "pending") schedulePendingCommandTimeout(msg);
 			}
 		} else {
 			isProcessing.value = true;
@@ -5398,9 +6513,7 @@ function useCommandConfirmation() {
 				delete msg.command.timeoutAt;
 				delete msg.command.conversationId;
 			} catch (e) {
-				msg.command.status = "pending";
-				delete msg.command.resolvedAt;
-				msg.command.timeoutAt = Date.now() + COMMAND_CONFIRM_TIMEOUT_MS;
+				markCommandAsPending(msg);
 				console.error("取消指令失敗:", e);
 			} finally {
 				isProcessing.value = false;
@@ -5422,7 +6535,8 @@ function useCommandConfirmation() {
 //#endregion
 //#region src/utils/exportUtils.js
 function normalizeFilenamePart(rawValue, fallback) {
-	return (typeof rawValue === "string" ? rawValue.trim() : "").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || fallback;
+	const withoutIllegalPathChars = (typeof rawValue === "string" ? rawValue.trim() : "").replace(/[\\/:*?"<>|]/g, "-");
+	return Array.from(withoutIllegalPathChars, (char) => char.charCodeAt(0) < 32 ? "-" : char).join("").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || fallback;
 }
 function sanitizeFilenamePart(value, fallback = "export") {
 	return normalizeFilenamePart(value, normalizeFilenamePart(fallback, "export"));
@@ -5565,21 +6679,12 @@ function useConversationDeletion() {
 	const chatStore = useChatStore();
 	const conversationStore = useConversationStore();
 	const { currentConversationId } = storeToRefs(conversationStore);
-	const pendingDelete = ref(null);
+	const { undo: showUndoToast, dismissAll } = useToastQueue();
+	const pendingDeletes = ref(/* @__PURE__ */ new Map());
 	/**
 	* Handle conversation deletion — optimistic removal with 5-second undo window.
 	*/
 	async function handleDeleteChat(id) {
-		if (pendingDelete.value) {
-			clearTimeout(pendingDelete.value.timeoutId);
-			const prevId = pendingDelete.value.id;
-			pendingDelete.value = null;
-			try {
-				await chatApi.clearHistory(prevId);
-			} catch (e) {
-				console.error("刪除失敗", e);
-			}
-		}
 		const conv = conversationStore.conversations.find((c) => c.id === id);
 		if (!conv) return;
 		const backupIdx = conversationStore.conversations.findIndex((c) => c.id === id);
@@ -5588,39 +6693,28 @@ function useConversationDeletion() {
 		if (wasActive) {
 			chatStore.clearMessages();
 			if (conversationStore.conversations.length > 0) {
-				const nextId = conversationStore.conversations[0].id;
-				conversationStore.selectConversation(nextId);
-				chatStore.loadHistory(nextId);
+				const nextId$1 = conversationStore.conversations[0].id;
+				conversationStore.selectConversation(nextId$1);
+				chatStore.loadHistory(nextId$1);
 			} else conversationStore.createNewConversation();
 		}
-		const timeoutId = setTimeout(async () => {
-			if (pendingDelete.value?.id === id) {
-				pendingDelete.value = null;
-				try {
-					await chatApi.clearHistory(id);
-				} catch (e) {
-					console.error("刪除失敗", e);
-					await conversationStore.loadConversations();
-				}
-			}
-		}, 5e3);
-		pendingDelete.value = {
-			id,
-			title: conv.title,
+		pendingDeletes.value.set(id, {
 			backup: conv,
 			backupIdx,
-			wasActive,
-			timeoutId
-		};
+			wasActive
+		});
+		showUndoToast(`已刪除「${conv.title}」`, {
+			duration: 5e3,
+			data: { conversationId: id },
+			onAction: () => restoreConversation(id),
+			onExpire: () => commitDelete(id)
+		});
 	}
-	/**
-	* Undo a pending conversation deletion within the 5-second window.
-	*/
-	function handleUndoDelete() {
-		if (!pendingDelete.value) return;
-		const { timeoutId, backup, backupIdx, wasActive, id } = pendingDelete.value;
-		clearTimeout(timeoutId);
-		pendingDelete.value = null;
+	function restoreConversation(id) {
+		const pending = pendingDeletes.value.get(id);
+		if (!pending) return;
+		pendingDeletes.value.delete(id);
+		const { backup, backupIdx, wasActive } = pending;
 		conversationStore.conversations.splice(backupIdx, 0, backup);
 		if (wasActive) {
 			conversationStore.selectConversation(id);
@@ -5628,14 +6722,23 @@ function useConversationDeletion() {
 			chatStore.loadHistory(id);
 		}
 	}
-	function clearPendingDelete() {
-		if (pendingDelete.value) {
-			clearTimeout(pendingDelete.value.timeoutId);
-			pendingDelete.value = null;
+	async function commitDelete(id) {
+		if (!pendingDeletes.value.get(id)) return;
+		pendingDeletes.value.delete(id);
+		try {
+			await chatApi.clearHistory(id);
+		} catch (e) {
+			console.error("刪除失敗", e);
+			await conversationStore.loadConversations();
 		}
 	}
+	function handleUndoDelete() {}
+	function clearPendingDelete() {
+		dismissAll();
+		for (const id of pendingDeletes.value.keys()) commitDelete(id);
+	}
 	return {
-		pendingDelete,
+		pendingDelete: ref(null),
 		handleDeleteChat,
 		handleUndoDelete,
 		clearPendingDelete
@@ -5869,34 +6972,40 @@ var _hoisted_4 = {
 var _sfc_main = {
 	__name: "App",
 	setup(__props) {
-		const AdminDashboard = defineAsyncComponent(() => __vitePreload(() => import("./AdminDashboard-DseJ2ei4.js"), __vite__mapDeps([0,1,2,3,4,5])));
+		const AdminDashboard = defineAsyncComponent(() => __vitePreload(() => import("./AdminDashboard-CpxNEyki.js"), __vite__mapDeps([0,1,2,3,4,5])));
 		const authStore = useAuthStore();
 		const chatStore = useChatStore();
 		const conversationStore = useConversationStore();
 		const systemStore = useSystemStore();
 		const { isLoggedIn, currentUser, isAdmin } = storeToRefs(authStore);
-		const { messages, userInput, isProcessing, model, displayModelName, hasMoreHistory, isHistoryLoading, isLoadingMore, hasPendingHistoryReload } = storeToRefs(chatStore);
-		const { conversations, currentConversationId, isSidebarOpen } = storeToRefs(conversationStore);
+		const { messages, userInput, isProcessing, model, displayModelName, hasMoreHistory, isHistoryLoading, historyLoadFailed, isLoadingMore, hasPendingHistoryReload } = storeToRefs(chatStore);
+		const { conversations, currentConversationId, isSidebarOpen, isConversationsLoading } = storeToRefs(conversationStore);
 		const { serverIp, availableModels, showAdmin, statusMessage } = storeToRefs(systemStore);
 		const isInitializing = ref(true);
 		const chatInterfaceRef = ref(null);
 		let bootstrapPromise = null;
-		const { sendMessage, stopStreaming, retryNow, isRetrying, retryCountdown } = useChat();
+		const { sendMessage, stopStreaming, retryNow, isRetrying, retryCountdown, toolCallStatus } = useChat();
 		const { isBackendOnline, isBrowserOnline, isOnline, handleNetworkReconnected, handleNetworkDisconnected, startPing, stopPing } = useNetworkStatus();
 		const { isMobileViewport, handleLayoutTouchStart, handleLayoutTouchMove, handleLayoutTouchEnd, setupViewportListener, teardownViewportListener, onSidebarOpenChange } = useSwipeGesture();
-		const { showModelSwitchToast, modelSwitchToastMessage, suppressNextModelSwitchToast, hideModelSwitchToast, triggerModelSwitchToast } = useModelSwitchToast();
+		const { suppressNextModelSwitchToast, hideModelSwitchToast, triggerModelSwitchToast } = useModelSwitchToast();
+		const { toasts: toasts$1, handleAction: handleToastAction, dismissAll: dismissAllToasts } = useToastQueue();
 		const { isShortcutHelpOpen, handleGlobalShortcut } = useKeyboardShortcuts({
 			sidebarRef: chatInterfaceRef,
 			onNewChat: handleNewChat
 		});
 		const { commandTimeoutHandles, clearCommandTimeout, clearAllCommandTimeouts, schedulePendingCommandTimeout, handleCommandAction, resetPollTokens } = useCommandConfirmation();
 		const { handleExportChat } = useConversationExport();
-		const { pendingDelete, handleDeleteChat, handleUndoDelete, clearPendingDelete } = useConversationDeletion();
+		const { handleDeleteChat, clearPendingDelete } = useConversationDeletion();
 		const { handleLoadMore, canRegenerateMessage, handleEditMessage, handleRegenerateMessage } = useMessageEditing({ sendMessage });
+		function handleRetryHistory() {
+			const id = currentConversationId.value;
+			if (id) chatStore.loadHistory(id);
+		}
 		function resetWorkspaceState() {
 			resetPollTokens();
 			clearAllCommandTimeouts();
 			hideModelSwitchToast();
+			dismissAllToasts();
 			clearPendingDelete();
 			systemStore.clearStatusMessage();
 			chatStore.clearMessages();
@@ -6032,7 +7141,7 @@ var _sfc_main = {
 				suppressNextModelSwitchToast.value = false;
 				return;
 			}
-			triggerModelSwitchToast(`已切換至 ${resolveModelLabel(availableModels.value, nextModel)}`);
+			triggerModelSwitchToast(`接下來的訊息將使用 ${resolveModelLabel(availableModels.value, nextModel)}，此前訊息不受影響`);
 		});
 		watch(() => messages.value.map((msg) => ({
 			msg,
@@ -6060,19 +7169,15 @@ var _sfc_main = {
 		});
 		return (_ctx, _cache) => {
 			return openBlock(), createElementBlock("div", _hoisted_1, [
-				createVNode(ModelSwitchToast_default, {
-					show: unref(showModelSwitchToast),
-					message: unref(modelSwitchToastMessage)
-				}, null, 8, ["show", "message"]),
+				createVNode(ToastContainer_default, {
+					toasts: unref(toasts$1),
+					onAction: unref(handleToastAction)
+				}, null, 8, ["toasts", "onAction"]),
 				createVNode(NetworkOfflineBanner_default, { show: unref(isLoggedIn) && !unref(isBrowserOnline) }, null, 8, ["show"]),
 				createVNode(ShortcutHelpDialog_default, {
 					isOpen: unref(isShortcutHelpOpen) && unref(isLoggedIn) && !unref(showAdmin),
 					onClose: _cache[0] || (_cache[0] = ($event) => isShortcutHelpOpen.value = false)
 				}, null, 8, ["isOpen"]),
-				createVNode(UndoDeleteToast_default, {
-					pendingDelete: unref(pendingDelete),
-					onUndo: unref(handleUndoDelete)
-				}, null, 8, ["pendingDelete", "onUndo"]),
 				isInitializing.value ? (openBlock(), createElementBlock("div", _hoisted_2, [createBaseVNode("div", _hoisted_3, [(openBlock(), createElementBlock("svg", _hoisted_4, [..._cache[7] || (_cache[7] = [createBaseVNode("circle", {
 					class: "opacity-25",
 					cx: "12",
@@ -6100,6 +7205,7 @@ var _sfc_main = {
 					ref: chatInterfaceRef,
 					isMobileViewport: unref(isMobileViewport),
 					isSidebarOpen: unref(isSidebarOpen),
+					isConversationsLoading: unref(isConversationsLoading),
 					conversations: unref(conversations),
 					currentConversationId: unref(currentConversationId),
 					serverIp: unref(serverIp),
@@ -6114,12 +7220,14 @@ var _sfc_main = {
 					availableModels: unref(availableModels),
 					statusMessage: unref(statusMessage),
 					isRetrying: unref(isRetrying),
+					toolCallStatus: unref(toolCallStatus),
 					retryCountdown: unref(retryCountdown),
 					onRetry: unref(retryNow),
 					onCancelRetry: unref(stopStreaming),
 					canRegenerateMessage: unref(canRegenerateMessage),
 					hasMoreFromServer: unref(hasMoreHistory),
 					isHistoryLoading: unref(isHistoryLoading),
+					historyLoadFailed: unref(historyLoadFailed),
 					isLoadingMore: unref(isLoadingMore),
 					onTouchstart: unref(handleLayoutTouchStart),
 					onTouchmove: unref(handleLayoutTouchMove),
@@ -6140,10 +7248,12 @@ var _sfc_main = {
 					onStop: unref(stopStreaming),
 					onEditMessage: unref(handleEditMessage),
 					onRegenerateMessage: unref(handleRegenerateMessage),
-					onLoadMore: unref(handleLoadMore)
+					onLoadMore: unref(handleLoadMore),
+					onRetryHistory: handleRetryHistory
 				}, null, 8, [
 					"isMobileViewport",
 					"isSidebarOpen",
+					"isConversationsLoading",
 					"conversations",
 					"currentConversationId",
 					"serverIp",
@@ -6158,12 +7268,14 @@ var _sfc_main = {
 					"availableModels",
 					"statusMessage",
 					"isRetrying",
+					"toolCallStatus",
 					"retryCountdown",
 					"onRetry",
 					"onCancelRetry",
 					"canRegenerateMessage",
 					"hasMoreFromServer",
 					"isHistoryLoading",
+					"historyLoadFailed",
 					"isLoadingMore",
 					"onTouchstart",
 					"onTouchmove",
@@ -6188,6 +7300,7 @@ var App_default = _sfc_main;
 var app = createApp(App_default);
 var pinia = createPinia();
 app.use(pinia);
+document.title = APP_CONFIG.name;
 useThemeStore().initTheme();
 app.mount("#app");
 

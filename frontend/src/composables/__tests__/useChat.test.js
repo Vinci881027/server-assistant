@@ -129,6 +129,7 @@ describe('useChat', () => {
 
       expect(streamSpy).toHaveBeenCalledTimes(1)
       expect(isRetrying.value).toBe(true)
+      expect(systemStore.statusMessage).toContain('正在重試（1/3）')
       expect(systemStore.statusMessage).toContain('將在 1 秒後自動重試')
       expect(retryCountdown.value).toMatchObject({
         active: true,
@@ -151,6 +152,50 @@ describe('useChat', () => {
         remainingSec: 0,
         totalSec: 0,
       })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('shows connection retry status copy on transient network failure', async () => {
+    vi.useFakeTimers()
+    try {
+      const streamSpy = vi
+        .spyOn(chatApi, 'streamChat')
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce(new Response('data: 網路恢復後成功\n\n', {
+          status: 200,
+          headers: { 'Content-Type': 'text/event-stream' },
+        }))
+
+      const chatStore = useChatStore()
+      const conversationStore = useConversationStore()
+      const systemStore = useSystemStore()
+      const { sendMessage, isRetrying, retryCountdown } = useChat()
+
+      conversationStore.selectConversation('conv-1')
+      chatStore.userInput = '網路測試'
+
+      const sendPromise = sendMessage()
+      await flushPromises()
+
+      expect(streamSpy).toHaveBeenCalledTimes(1)
+      expect(isRetrying.value).toBe(true)
+      expect(systemStore.statusMessage).toContain('連線不穩，正在重試（1/3）... 2 秒後自動重試')
+      expect(retryCountdown.value).toMatchObject({
+        active: true,
+        type: 'network',
+        remainingSec: 2,
+        totalSec: 2,
+      })
+
+      await vi.advanceTimersByTimeAsync(2000)
+      await sendPromise
+
+      expect(streamSpy).toHaveBeenCalledTimes(2)
+      expect(chatStore.messages[1].content).toBe('網路恢復後成功')
+      expect(systemStore.statusMessage).toBe('')
+      expect(isRetrying.value).toBe(false)
     } finally {
       vi.useRealTimers()
     }
@@ -191,7 +236,8 @@ describe('useChat', () => {
       await flushPromises()
 
       expect(streamSpy).toHaveBeenCalledTimes(1)
-      expect(systemStore.statusMessage).toContain('您的請求太頻繁，請稍後 2 秒')
+      expect(systemStore.statusMessage).toContain('正在重試（1/3）')
+      expect(systemStore.statusMessage).toContain('您的請求太頻繁，2 秒後自動重試')
 
       await vi.advanceTimersByTimeAsync(2000)
       await sendPromise
@@ -238,7 +284,8 @@ describe('useChat', () => {
       await flushPromises()
 
       expect(streamSpy).toHaveBeenCalledTimes(1)
-      expect(systemStore.statusMessage).toContain('系統目前繁忙，請稍後 2 秒再試')
+      expect(systemStore.statusMessage).toContain('正在重試（1/3）')
+      expect(systemStore.statusMessage).toContain('系統目前繁忙，2 秒後自動重試')
 
       await vi.advanceTimersByTimeAsync(2000)
       await sendPromise
@@ -285,7 +332,8 @@ describe('useChat', () => {
       await flushPromises()
 
       expect(streamSpy).toHaveBeenCalledTimes(1)
-      expect(systemStore.statusMessage).toContain('系統目前繁忙，請稍後 2 秒再試')
+      expect(systemStore.statusMessage).toContain('正在重試（1/3）')
+      expect(systemStore.statusMessage).toContain('系統目前繁忙，2 秒後自動重試')
 
       await vi.advanceTimersByTimeAsync(2000)
       await sendPromise
@@ -330,7 +378,8 @@ describe('useChat', () => {
       await flushPromises()
 
       expect(streamSpy).toHaveBeenCalledTimes(1)
-      expect(systemStore.statusMessage).toContain('您的請求太頻繁，請稍後 2 秒')
+      expect(systemStore.statusMessage).toContain('正在重試（1/3）')
+      expect(systemStore.statusMessage).toContain('您的請求太頻繁，2 秒後自動重試')
 
       await vi.advanceTimersByTimeAsync(2000)
       await sendPromise
@@ -370,6 +419,7 @@ describe('useChat', () => {
 
       expect(streamSpy).toHaveBeenCalledTimes(1)
       expect(isRetrying.value).toBe(true)
+      expect(systemStore.statusMessage).toContain('正在重試（1/3）')
       expect(systemStore.statusMessage).toContain('將在 1 秒後自動重試')
       expect(retryCountdown.value).toMatchObject({
         active: true,
@@ -423,6 +473,7 @@ describe('useChat', () => {
 
       expect(streamSpy).toHaveBeenCalledTimes(1)
       expect(isRetrying.value).toBe(true)
+      expect(systemStore.statusMessage).toContain('正在重試（1/3）')
       expect(systemStore.statusMessage).toContain('將在 2 秒後自動重試')
       expect(retryCountdown.value).toMatchObject({
         active: true,
@@ -478,7 +529,8 @@ describe('useChat', () => {
 
       expect(streamSpy).toHaveBeenCalledTimes(1)
       expect(isRetrying.value).toBe(true)
-      expect(systemStore.statusMessage).toContain('目前 AI 服務繁忙，請等待 2 秒後重試，或切換至其他模型')
+      expect(systemStore.statusMessage).toContain('正在重試（1/3）')
+      expect(systemStore.statusMessage).toContain('目前 AI 服務繁忙，2 秒後自動重試，或切換至其他模型')
       expect(retryCountdown.value).toMatchObject({
         active: true,
         type: 'rateLimit',
@@ -531,6 +583,7 @@ describe('useChat', () => {
 
       expect(streamSpy).toHaveBeenCalledTimes(1)
       expect(isRetrying.value).toBe(true)
+      expect(systemStore.statusMessage).toContain('正在重試（1/3）')
       expect(systemStore.statusMessage).toContain('將在 3 秒後自動重試')
 
       await vi.advanceTimersByTimeAsync(3000)

@@ -183,7 +183,7 @@ public class AiStreamRetryCoordinator {
                         .doBeforeRetry(signal -> emptyRetryCount.incrementAndGet())
                         .onRetryExhaustedThrow((spec, signal) -> signal.failure()))
                 .onErrorResume(EmptyModelResponseException.class,
-                        ignored -> Flux.just("⚠️ AI 未回傳內容。請嘗試重新輸入指令。"));
+                        ignored -> Flux.just("⚠️ AI 未能回應，請重試或切換模型。"));
     }
 
     private Retry buildHttpRetrySpec(

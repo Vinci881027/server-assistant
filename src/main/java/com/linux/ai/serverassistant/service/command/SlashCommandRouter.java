@@ -278,7 +278,7 @@ public class SlashCommandRouter implements DeterministicRouter,
         sb.append("""
 
                 **Exclamation Commands**
-                - `!<linux command>`：直接執行 Linux 指令（繞過 AI，例如 `!docker ps`）
+                - `!<command>`：直接執行 shell 指令（例：`!df -h`）
                 - 高風險命令仍會進入確認流程
                 """);
         return sb.toString();

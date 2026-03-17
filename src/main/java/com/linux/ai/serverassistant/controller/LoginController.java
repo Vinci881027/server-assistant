@@ -136,8 +136,10 @@ public class LoginController {
             if (failureStatus.blocked()) {
                 return tooManyLoginAttempts(failureStatus.retryAfterSeconds());
             }
+            Map<String, Object> failData = new HashMap<>();
+            failData.put("remainingAttempts", failureStatus.remainingAttempts());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("登入失敗：使用者名稱或密碼錯誤", "AUTH_FAILED"));
+                    .body(ApiResponse.error("登入失敗：使用者名稱或密碼錯誤", "AUTH_FAILED", failData));
         } finally {
             if (authPassword != null) {
                 Arrays.fill(authPassword, '\0');

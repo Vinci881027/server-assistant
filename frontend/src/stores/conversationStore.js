@@ -12,6 +12,7 @@ export const useConversationStore = defineStore('conversation', () => {
   const conversations = ref([])
   const currentConversationId = ref('')
   const isSidebarOpen = ref(true)
+  const isConversationsLoading = ref(true)
 
   // ========== Actions ==========
 
@@ -32,8 +33,10 @@ export const useConversationStore = defineStore('conversation', () => {
       const parsed = normalizeConversations(result)
       if (parsed) {
         conversations.value = parsed
+        isConversationsLoading.value = false
         return parsed
       }
+      isConversationsLoading.value = false
       return conversations.value
     } catch (error) {
       if (retry > 0) {
@@ -41,6 +44,7 @@ export const useConversationStore = defineStore('conversation', () => {
         return loadConversations(retry - 1)
       }
       console.error('Load conversations error:', error)
+      isConversationsLoading.value = false
       return conversations.value
     }
   }
@@ -87,6 +91,7 @@ export const useConversationStore = defineStore('conversation', () => {
     conversations,
     currentConversationId,
     isSidebarOpen,
+    isConversationsLoading,
     // Actions
     loadConversations,
     selectConversation,

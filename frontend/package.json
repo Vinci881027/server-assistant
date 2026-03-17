@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "lint": "eslint src --ext .js,.vue",
+    "lint:fix": "eslint src --ext .js,.vue --fix",
     "test": "npm run test:unit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
@@ -14,6 +16,7 @@
     "test:e2e:smoke": "playwright test tests/e2e/minimal-chat-flow.spec.js --grep \"login, send message, and load older history\" --workers=1"
   },
   "dependencies": {
+    "@tanstack/vue-virtual": "^3.13.23",
     "axios": "^1.13.5",
     "dompurify": "^3.3.1",
     "highlight.js": "^11.11.1",
@@ -23,12 +26,17 @@
     "vue": "^3.5.24"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@vitejs/plugin-vue": "^6.0.1",
     "autoprefixer": "^10.4.23",
+    "eslint": "^10.0.3",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.8.0",
     "jsdom": "^28.1.0",
     "postcss": "^8.5.6",
+    "prettier": "^3.8.1",
     "tailwindcss": "^4.1.18",
     "vite": "npm:rolldown-vite@7.2.5",
     "vitest": "^4.0.18"

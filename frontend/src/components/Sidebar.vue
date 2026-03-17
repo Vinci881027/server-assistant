@@ -13,16 +13,24 @@ const props = defineProps({
   currentId: {
     type: String,
     default: ''
+  },
+  loading: {
+    type: Boolean,
+    default: false
   }
 });
 const emit = defineEmits(['new-chat', 'select-chat', 'delete-chat', 'export-chat']);
 
 const searchQuery = ref('');
+const debouncedSearchQuery = ref('');
+const isSearchDebouncing = ref(false);
 const searchInputRef = ref(null);
 const isTouchDevice = ref(window.matchMedia('(hover: none)').matches);
 const pendingDeleteId = ref('');
 const openActionMenuId = ref('');
 let resetDeleteIntentTimer = null;
+let searchDebounceTimer = null;
+const SEARCH_DEBOUNCE_MS = 300;
 
 // ========== Pin state (localStorage) ==========
 const PINNED_KEY = 'sidebar_pinned_conversations';
@@ -65,7 +73,7 @@ function getDateGroup(isoString) {
 const DATE_GROUP_ORDER = ['今天', '昨天', '本週', '更早'];
 
 const groupedConversations = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase();
+  const q = debouncedSearchQuery.value;
   const all = props.conversations;
 
   if (q) {
@@ -97,10 +105,38 @@ const groupedConversations = computed(() => {
 });
 
 const hasNoSearchResults = computed(() => {
-  return searchQuery.value.trim() !== '' &&
+  return debouncedSearchQuery.value !== '' &&
+    !isSearchDebouncing.value &&
     groupedConversations.value.length > 0 &&
     groupedConversations.value[0].items.length === 0;
 });
+
+watch(searchQuery, (value) => {
+  const normalizedQuery = value.trim().toLowerCase();
+
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+  }
+
+  if (!normalizedQuery) {
+    debouncedSearchQuery.value = '';
+    isSearchDebouncing.value = false;
+    return;
+  }
+
+  if (normalizedQuery === debouncedSearchQuery.value) {
+    isSearchDebouncing.value = false;
+    return;
+  }
+
+  isSearchDebouncing.value = true;
+  searchDebounceTimer = setTimeout(() => {
+    debouncedSearchQuery.value = normalizedQuery;
+    isSearchDebouncing.value = false;
+    searchDebounceTimer = null;
+  }, SEARCH_DEBOUNCE_MS);
+}, { immediate: true });
 
 // ========== Action menu / delete ==========
 
@@ -219,6 +255,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearDeleteIntent();
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+  }
   window.removeEventListener('pointerdown', handleGlobalPointerDown);
   window.removeEventListener('keydown', handleGlobalKeydown);
 });
@@ -259,7 +299,13 @@ function formatRelativeTime(isoString) {
       <button
         @click="$emit('new-chat')"
         class="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all text-left hover:scale-[1.02]"
-        style="background-color: var(--bg-tertiary); color: var(--text-primary);"
+        :class="{ 'new-chat-highlight': !loading && conversations.length === 0 }"
+        :style="{
+          backgroundColor: !loading && conversations.length === 0
+            ? 'color-mix(in srgb, var(--accent-primary) 12%, var(--bg-tertiary))'
+            : 'var(--bg-tertiary)',
+          color: 'var(--text-primary)'
+        }"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: var(--text-tertiary);">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -277,17 +323,45 @@ function formatRelativeTime(isoString) {
           v-model="searchQuery"
           type="text"
           placeholder="搜尋對話..."
-          class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg outline-none transition-all"
+          class="w-full pl-8 pr-8 py-1.5 text-xs rounded-lg outline-none transition-all"
           style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
         />
+        <span
+          v-if="isSearchDebouncing"
+          class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none"
+          style="color: var(--text-tertiary);"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-3 w-3 animate-spin shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+            <path class="opacity-90" fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z"></path>
+          </svg>
+          <span class="text-xs">搜尋中…</span>
+        </span>
       </div>
     </div>
 
     <!-- Conversation list -->
     <div class="flex-1 overflow-y-auto px-2 py-1 custom-scrollbar">
 
+      <!-- Skeleton loader: initial fetch in progress -->
+      <div v-if="loading && conversations.length === 0 && !searchQuery.trim()" class="px-2 py-1" aria-busy="true" aria-label="載入對話中">
+        <div class="px-3 pt-3 pb-1">
+          <div class="skeleton-shimmer h-2 w-10 rounded"></div>
+        </div>
+        <div v-for="i in 5" :key="i" class="px-3 py-2 mb-0.5 rounded-lg">
+          <div class="skeleton-shimmer h-3 rounded mb-1.5" :style="{ width: (52 + i * 7) + '%' }"></div>
+          <div class="skeleton-shimmer h-2 rounded w-14"></div>
+        </div>
+      </div>
+
       <!-- Empty state: no conversations at all -->
-      <div v-if="conversations.length === 0 && !searchQuery.trim()" class="px-3 py-8 flex flex-col items-center gap-3 text-center">
+      <div v-else-if="conversations.length === 0 && !searchQuery.trim()" class="px-3 py-8 flex flex-col items-center gap-3 text-center">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: var(--text-tertiary);">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
@@ -328,7 +402,7 @@ function formatRelativeTime(isoString) {
           class="chat-item group flex items-center justify-between px-3 py-2 mb-0.5 text-sm rounded-lg cursor-pointer transition-all"
           :class="{
             'chat-item--active': currentId === chat.id,
-            'chat-item--pinned': pinnedIds.has(chat.id) && !searchQuery.trim()
+            'chat-item--pinned': pinnedIds.has(chat.id) && !debouncedSearchQuery
           }"
           role="button"
           tabindex="0"
@@ -486,5 +560,30 @@ function formatRelativeTime(isoString) {
 
 .sidebar-action-menu button:is(:hover, :focus-visible) {
   background-color: var(--bg-tertiary);
+}
+
+/* New-chat button pulse when sidebar is empty */
+@keyframes new-chat-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-primary) 0%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-primary) 28%, transparent); }
+}
+.new-chat-highlight {
+  animation: new-chat-glow 2.5s ease-in-out infinite;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--text-tertiary) 12%, transparent) 25%,
+    color-mix(in srgb, var(--text-tertiary) 22%, transparent) 50%,
+    color-mix(in srgb, var(--text-tertiary) 12%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
 }
 </style>

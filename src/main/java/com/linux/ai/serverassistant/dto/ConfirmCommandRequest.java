@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public class ConfirmCommandRequest {
     private static final String UUID_REGEX =
-            "^(\\s*|\\s*[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\s*)$";
+            "^\\s*[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\s*$";
 
     @NotBlank(message = "command 不能為空")
     @Size(max = 8192, message = "command 長度不可超過 8192")

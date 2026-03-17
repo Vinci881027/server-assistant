@@ -7,7 +7,8 @@ import jakarta.validation.constraints.Size;
 public class ChatStreamRequest {
     public static final int MAX_MESSAGE_LENGTH = 8_000;
     private static final String UUID_REGEX =
-            "^(\\s*|\\s*[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\s*)$";
+            "^\\s*[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\s*$";
+    private static final String MODEL_KEY_REGEX = "^\\s*[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}\\s*$";
 
     @NotBlank(message = "message 不能為空")
     @Size(max = MAX_MESSAGE_LENGTH, message = "message 長度不可超過 " + MAX_MESSAGE_LENGTH)
@@ -17,6 +18,8 @@ public class ChatStreamRequest {
     @Size(max = 128, message = "conversationId 長度不可超過 128")
     private String conversationId;
 
+    @NotBlank(message = "model 不能為空")
+    @Pattern(regexp = MODEL_KEY_REGEX, message = "model 格式不正確")
     @Size(max = 64, message = "model 長度不可超過 64")
     private String model;
 

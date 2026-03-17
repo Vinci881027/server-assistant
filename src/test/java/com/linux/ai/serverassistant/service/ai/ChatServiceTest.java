@@ -24,6 +24,7 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,6 +49,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -64,6 +67,7 @@ class ChatServiceTest {
     private ConversationService conversationService;
     private UserContext userContext;
     private ConfirmCommandHandler confirmCommandHandler;
+    private ToolStatusBus toolStatusBus;
 
     @BeforeEach
     void setUp() {
@@ -82,6 +86,27 @@ class ChatServiceTest {
         commandConfirmationService = mock(CommandConfirmationService.class);
         deterministicRouter = mock(DeterministicRouter.class);
         retryCoordinator = mock(AiStreamRetryCoordinator.class);
+        toolStatusBus = mock(ToolStatusBus.class);
+        Map<String, Sinks.Many<String>> toolStatusSinks = new ConcurrentHashMap<>();
+        when(toolStatusBus.createSink(anyString())).thenAnswer(invocation -> {
+            String contextKey = invocation.getArgument(0, String.class);
+            Sinks.Many<String> sink = Sinks.many().multicast().onBackpressureBuffer(32, false);
+            if (contextKey != null) {
+                toolStatusSinks.put(contextKey, sink);
+            }
+            return sink;
+        });
+        doAnswer(invocation -> {
+            String contextKey = invocation.getArgument(0, String.class);
+            if (contextKey == null) {
+                return null;
+            }
+            Sinks.Many<String> sink = toolStatusSinks.remove(contextKey);
+            if (sink != null) {
+                sink.tryEmitComplete();
+            }
+            return null;
+        }).when(toolStatusBus).complete(anyString());
 
         DiskMountService diskMountService = mock(DiskMountService.class);
         AdminAuthorizationService adminAuthorizationService = mock(AdminAuthorizationService.class);
@@ -127,6 +152,7 @@ class ChatServiceTest {
                 confirmCommandHandler,
                 userContext,
                 retryCoordinator,
+                toolStatusBus,
                 "primary-key",
                 10
         );
@@ -154,6 +180,7 @@ class ChatServiceTest {
                 confirmCommandHandler,
                 userContext,
                 retryCoordinator,
+                toolStatusBus,
                 "   ",
                 10
         ));

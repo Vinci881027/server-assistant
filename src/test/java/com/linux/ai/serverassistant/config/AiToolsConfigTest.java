@@ -1,5 +1,6 @@
 package com.linux.ai.serverassistant.config;
 
+import com.linux.ai.serverassistant.service.ai.ToolStatusBus;
 import com.linux.ai.serverassistant.service.command.CommandExecutionService;
 import com.linux.ai.serverassistant.service.file.FileOperationService;
 import com.linux.ai.serverassistant.service.security.AdminAuthorizationService;
@@ -31,11 +32,13 @@ class AiToolsConfigTest {
     private FileOperationService fileOperationService;
     private UserManagementService userManagementService;
     private AdminAuthorizationService adminAuthorizationService;
+    private ToolStatusBus toolStatusBus;
 
     @BeforeEach
     void setUp() {
         userContext = new UserContext();
-        config = new AiToolsConfig(userContext);
+        toolStatusBus = mock(ToolStatusBus.class);
+        config = new AiToolsConfig(userContext, toolStatusBus);
         commandExecutionService = mock(CommandExecutionService.class);
         fileOperationService = mock(FileOperationService.class);
         userManagementService = mock(UserManagementService.class);

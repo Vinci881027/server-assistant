@@ -50,6 +50,7 @@ const purgeMessage = ref('');
 const exportMessage = ref('');
 const isModelSaving = ref(false);
 const modelMessage = ref('');
+const adminError = ref('')
 const lastAuditUpdatedAt = ref(null)
 const lastHistoryUpdatedAt = ref(null)
 let autoRefreshTimerId = null
@@ -76,13 +77,28 @@ const newModel = ref({
   enabled: true,
 });
 
+const clearAdminError = () => {
+  adminError.value = ''
+}
+
+const reportAdminApiError = (action, error, fallbackMessage = `${action}失敗`) => {
+  console.error(`[AdminDashboard] ${action} failed:`, error)
+  const fallback = typeof fallbackMessage === 'string' && fallbackMessage.trim()
+    ? fallbackMessage.trim()
+    : `${action}失敗`
+  const reason = typeof error?.message === 'string' ? error.message.trim() : ''
+  adminError.value = !reason || reason === fallback ? fallback : `${fallback}：${reason}`
+  return adminError.value
+}
+
 // 載入使用者列表
 const fetchUsers = async () => {
   try {
     const res = await httpClient.get('/admin/users')
     const payload = Array.isArray(res?.data?.data) ? res.data.data : res?.data
     users.value = Array.isArray(payload) ? payload : []
-  } catch (e) { console.error(e); }
+    clearAdminError()
+  } catch (e) { reportAdminApiError('載入使用者列表', e) }
 };
 
 const applyPageState = (target, payload, fallbackPage) => {
@@ -165,7 +181,8 @@ const fetchAuditLogs = async (page = auditPage.value.page, { silent = false } = 
     auditLogs.value = sortAuditLogsNewestFirst(items)
     applyPageState(auditPage, payload, safePage)
     lastAuditUpdatedAt.value = Date.now()
-  } catch (e) { console.error(e); }
+    clearAdminError()
+  } catch (e) { reportAdminApiError('載入指令審計紀錄', e) }
   finally { if (!silent) isLoading.value = false; }
 };
 
@@ -187,7 +204,8 @@ const fetchHistory = async (page = historyPage.value.page, { silent = false } = 
     chatHistory.value = Array.isArray(payload.items) ? payload.items : []
     applyPageState(historyPage, payload, safePage)
     lastHistoryUpdatedAt.value = Date.now()
-  } catch (e) { console.error(e); }
+    clearAdminError()
+  } catch (e) { reportAdminApiError('載入對話紀錄', e) }
   finally { if (!silent) isLoading.value = false; }
 };
 
@@ -196,7 +214,8 @@ const fetchModels = async () => {
   try {
     const res = await httpClient.get('/admin/models')
     models.value = res?.data || []
-  } catch (e) { console.error(e); }
+    clearAdminError()
+  } catch (e) { reportAdminApiError('載入模型列表', e) }
 };
 
 const saveModel = async (model) => {
@@ -214,10 +233,10 @@ const saveModel = async (model) => {
     }
     await httpClient.post('/admin/models', payload)
     modelMessage.value = `已儲存模型：${model.id}`
+    clearAdminError()
     await fetchModels()
   } catch (e) {
-    console.error(e)
-    modelMessage.value = e?.message || '儲存失敗'
+    modelMessage.value = reportAdminApiError('儲存模型', e, '儲存失敗')
   } finally {
     isModelSaving.value = false
   }
@@ -243,10 +262,10 @@ const addModel = async () => {
     await httpClient.post('/admin/models', payload)
     modelMessage.value = `已新增模型：${payload.id}`
     newModel.value = { id: '', label: '', name: '', tpm: 0, category: 'Other', enabled: true }
+    clearAdminError()
     await fetchModels()
   } catch (e) {
-    console.error(e)
-    modelMessage.value = e?.message || '新增失敗'
+    modelMessage.value = reportAdminApiError('新增模型', e, '新增失敗')
   } finally {
     isModelSaving.value = false
   }
@@ -262,10 +281,10 @@ const deleteModel = async (id) => {
   try {
     await httpClient.delete(`/admin/models/${encodeURIComponent(id)}`)
     modelMessage.value = `已刪除模型：${id}`
+    clearAdminError()
     await fetchModels()
   } catch (e) {
-    console.error(e)
-    modelMessage.value = e?.message || '刪除失敗'
+    modelMessage.value = reportAdminApiError('刪除模型', e, '刪除失敗')
   } finally {
     isModelSaving.value = false
   }
@@ -278,12 +297,14 @@ watch(selectedUser, () => {
   lastAuditUpdatedAt.value = null
   lastHistoryUpdatedAt.value = null
   exportMessage.value = ''
+  clearAdminError()
   if (activeTab.value === 'audit') fetchAuditLogs(DEFAULT_PAGE);
   if (activeTab.value === 'history') fetchHistory(DEFAULT_PAGE);
 });
 
 watch(activeTab, (newTab) => {
   exportMessage.value = ''
+  clearAdminError()
   if (newTab === 'models') {
     fetchModels();
   } else if (selectedUser.value) {
@@ -410,9 +431,9 @@ const exportSelectedUserCsv = async () => {
     const fileName = `${sanitizeFilenamePart(username, 'user')}-${activeTab.value}-${buildExportTimestamp()}.csv`
     downloadTextFile(fileName, `\uFEFF${csvText}`, 'text/csv;charset=utf-8')
     exportMessage.value = `已匯出 ${label} CSV（${csvRows.length} 筆）`
+    clearAdminError()
   } catch (e) {
-    console.error(e)
-    exportMessage.value = e?.message || '匯出失敗'
+    exportMessage.value = reportAdminApiError('匯出 CSV', e, '匯出失敗')
   } finally {
     isExporting.value = false
   }
@@ -465,6 +486,7 @@ const purgeSelectedUserChats = async () => {
     const data = res?.data
     const deletedChat = data?.data?.deletedChatMessages ?? 0
     purgeMessage.value = `已清除 ${selectedUser.value}：對話 ${deletedChat} 筆`
+    clearAdminError()
     notifyConversationsUpdated()
 
     const before = selectedUser.value
@@ -476,8 +498,7 @@ const purgeSelectedUserChats = async () => {
       await fetchHistory(DEFAULT_PAGE)
     }
   } catch (e) {
-    console.error(e)
-    purgeMessage.value = e?.message || '清除失敗'
+    purgeMessage.value = reportAdminApiError('清除使用者對話紀錄', e, '清除失敗')
   } finally {
     isPurging.value = false
   }
@@ -495,14 +516,14 @@ const purgeSelectedUserCommands = async () => {
     const data = res?.data
     const deletedCmd = data?.data?.deletedCommandLogs ?? 0
     purgeMessage.value = `已清除 ${selectedUser.value}：指令 ${deletedCmd} 筆`
+    clearAdminError()
 
     auditLogs.value = []
     if (activeTab.value === 'audit') {
       await fetchAuditLogs(DEFAULT_PAGE)
     }
   } catch (e) {
-    console.error(e)
-    purgeMessage.value = e?.message || '清除失敗'
+    purgeMessage.value = reportAdminApiError('清除使用者指令紀錄', e, '清除失敗')
   } finally {
     isPurging.value = false
   }
@@ -522,6 +543,7 @@ const purgeSelectedUserActivity = async () => {
     const deletedChat = data?.data?.deletedChatMessages ?? 0
     const deletedCmd = data?.data?.deletedCommandLogs ?? 0
     purgeMessage.value = `已清除 ${user}：對話 ${deletedChat} 筆、指令 ${deletedCmd} 筆`
+    clearAdminError()
     notifyConversationsUpdated()
 
     await fetchUsers()
@@ -534,8 +556,7 @@ const purgeSelectedUserActivity = async () => {
       if (activeTab.value === 'history') await fetchHistory(DEFAULT_PAGE)
     }
   } catch (e) {
-    console.error(e)
-    purgeMessage.value = e?.message || '清除失敗'
+    purgeMessage.value = reportAdminApiError('清除使用者活動紀錄', e, '清除失敗')
   } finally {
     isPurging.value = false
   }
@@ -552,14 +573,14 @@ const purgeChats = async () => {
     const data = res?.data
     const deletedChat = data?.data?.deletedChatMessages ?? 0
     purgeMessage.value = `已清除：對話 ${deletedChat} 筆`
+    clearAdminError()
     notifyConversationsUpdated()
 
     selectedUser.value = ''
     resetPagedData()
     await fetchUsers()
   } catch (e) {
-    console.error(e)
-    purgeMessage.value = e?.message || '清除失敗'
+    purgeMessage.value = reportAdminApiError('清除所有對話紀錄', e, '清除失敗')
   } finally {
     isPurging.value = false
   }
@@ -576,14 +597,14 @@ const purgeCommands = async () => {
     const data = res?.data
     const deletedCmd = data?.data?.deletedCommandLogs ?? 0
     purgeMessage.value = `已清除：指令 ${deletedCmd} 筆`
+    clearAdminError()
 
     auditLogs.value = []
     if (activeTab.value === 'audit' && selectedUser.value) {
       await fetchAuditLogs(DEFAULT_PAGE)
     }
   } catch (e) {
-    console.error(e)
-    purgeMessage.value = e?.message || '清除失敗'
+    purgeMessage.value = reportAdminApiError('清除所有指令紀錄', e, '清除失敗')
   } finally {
     isPurging.value = false
   }
@@ -606,7 +627,8 @@ const purgeCommands = async () => {
         <button @click="themeStore.toggleTheme()"
                 class="p-2 rounded-lg border transition-all hover:scale-105"
                 style="background-color: var(--bg-tertiary); border-color: var(--border-primary);"
-                title="切換主題">
+                title="切換主題"
+                aria-label="切換主題">
           <svg v-if="themeStore.isDark" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: var(--accent-warning);">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
@@ -617,6 +639,8 @@ const purgeCommands = async () => {
         <!-- Close button -->
         <button @click="$emit('close')" class="p-2 rounded-lg transition-colors"
                 style="color: var(--text-tertiary);"
+                title="關閉管理面板"
+                aria-label="關閉管理面板"
                 @mouseenter="$event.target.style.backgroundColor = 'var(--bg-tertiary)'"
                 @mouseleave="$event.target.style.backgroundColor = 'transparent'">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -704,6 +728,15 @@ const purgeCommands = async () => {
                     : { borderColor: 'transparent', color: 'var(--text-tertiary)' }">
             模型設定
           </button>
+        </div>
+
+        <div v-if="adminError" class="mx-6 mt-4 rounded-lg border px-4 py-3 text-sm admin-inline-alert" role="alert">
+          <div class="flex items-start justify-between gap-4">
+            <p class="leading-relaxed">{{ adminError }}</p>
+            <button type="button" class="admin-inline-alert-close" @click="clearAdminError">
+              關閉
+            </button>
+          </div>
         </div>
 
         <!-- Models Management View -->
@@ -867,11 +900,11 @@ const purgeCommands = async () => {
             </div>
 
             <!-- Empty state -->
-            <div v-if="!selectedUser" class="h-full flex flex-col items-center justify-center opacity-40">
+            <div v-if="!selectedUser" class="h-full flex flex-col items-center justify-center opacity-60">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: var(--text-tertiary);">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
-              <p style="color: var(--text-tertiary);">請從左側選擇一位使用者</p>
+              <p class="text-sm" style="color: var(--text-tertiary);">← 請先從左側選擇一個用戶</p>
             </div>
 
             <!-- Loading -->
@@ -882,65 +915,115 @@ const purgeCommands = async () => {
             <!-- Audit Logs Table -->
             <div v-else-if="activeTab === 'audit'" class="space-y-4">
               <div v-if="auditLogs.length === 0" class="text-center py-10" style="color: var(--text-tertiary);">尚無指令執行紀錄</div>
-              <div v-else class="overflow-hidden rounded-xl border" style="background-color: var(--bg-secondary); border-color: var(--border-primary);">
-                <table class="w-full text-left border-collapse">
-                  <thead>
-                    <tr style="background-color: var(--bg-tertiary);">
-                      <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">時間</th>
-                      <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">狀態</th>
-                      <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">類型</th>
-                      <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">指令</th>
-                      <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">輸出結果</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="log in sortedAuditLogs" :key="log.id" class="transition-colors border-b" style="border-color: var(--border-primary);"
-                        @mouseenter="$event.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'"
-                        @mouseleave="$event.currentTarget.style.backgroundColor = 'transparent'">
-                      <td class="py-3 px-4 text-xs whitespace-nowrap font-mono" style="color: var(--text-tertiary);">{{ formatDate(log.executionTime) }}</td>
-                      <td class="py-3 px-4">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                              :style="log.success
-                                ? { backgroundColor: 'color-mix(in srgb, var(--accent-success) 15%, transparent)', color: 'var(--accent-success)' }
-                                : { backgroundColor: 'color-mix(in srgb, var(--accent-danger) 15%, transparent)', color: 'var(--accent-danger)' }">
-                          {{ log.success ? 'SUCCESS' : 'FAILED' }}
-                        </span>
-                        <div v-if="!log.success && log.exitCode !== null && log.exitCode !== undefined"
-                             class="mt-1 text-[10px] font-mono"
-                             style="color: var(--text-tertiary);">
-                          exit: {{ log.exitCode }}
-                        </div>
-                      </td>
-                      <td class="py-3 px-4">
-                        <span v-if="log.commandType === 'MODIFY'"
-                              class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                              style="background-color: color-mix(in srgb, var(--accent-warning) 15%, transparent); color: var(--accent-warning);">
-                          MODIFY
-                        </span>
-                        <span v-else
-                              class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                              style="background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent); color: var(--text-tertiary);">
-                          READ
-                        </span>
-                      </td>
-                      <td class="py-3 px-4">
-                        <code class="text-xs font-mono px-2 py-1 rounded border" style="background-color: var(--code-bg); border-color: var(--border-primary); color: var(--code-text);">{{ log.command }}</code>
-                      </td>
-                      <td class="py-3 px-4">
-                        <details class="group">
-                          <summary class="cursor-pointer text-xs select-none flex items-center gap-1" style="color: var(--text-tertiary);">
-                            <span class="group-open:hidden">&#9654; 顯示輸出</span>
-                            <span class="hidden group-open:inline">&#9660; 隱藏輸出</span>
-                          </summary>
-                          <div class="mt-2">
-                            <pre class="text-[10px] leading-relaxed font-mono p-3 rounded-lg border overflow-x-auto max-h-60 custom-scrollbar"
-                                 style="background-color: var(--code-bg); border-color: var(--border-primary); color: var(--text-secondary);">{{ hideResolvedCmdMarker(log.output) }}</pre>
+              <div v-else>
+                <!-- Mobile card list (< 768px) -->
+                <div class="md:hidden space-y-2">
+                  <div v-for="log in sortedAuditLogs" :key="log.id"
+                       class="rounded-xl border p-3 space-y-2"
+                       style="background-color: var(--bg-secondary); border-color: var(--border-primary);">
+                    <!-- Time + status + type badges -->
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="text-[11px] font-mono" style="color: var(--text-tertiary);">{{ formatDate(log.executionTime) }}</span>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                            :style="log.success
+                              ? { backgroundColor: 'color-mix(in srgb, var(--accent-success) 15%, transparent)', color: 'var(--accent-success)' }
+                              : { backgroundColor: 'color-mix(in srgb, var(--accent-danger) 15%, transparent)', color: 'var(--accent-danger)' }">
+                        {{ log.success ? 'SUCCESS' : 'FAILED' }}
+                      </span>
+                      <span v-if="!log.success && log.exitCode !== null && log.exitCode !== undefined"
+                            class="text-[10px] font-mono" style="color: var(--text-tertiary);">
+                        exit: {{ log.exitCode }}
+                      </span>
+                      <span v-if="log.commandType === 'MODIFY'"
+                            class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                            style="background-color: color-mix(in srgb, var(--accent-warning) 15%, transparent); color: var(--accent-warning);">
+                        MODIFY
+                      </span>
+                      <span v-else
+                            class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                            style="background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent); color: var(--text-tertiary);">
+                        READ
+                      </span>
+                    </div>
+                    <!-- Command -->
+                    <div class="overflow-x-auto">
+                      <code class="text-xs font-mono px-2 py-1 rounded border break-all"
+                            style="background-color: var(--code-bg); border-color: var(--border-primary); color: var(--code-text); display: block; white-space: pre-wrap; word-break: break-all;">{{ log.command }}</code>
+                    </div>
+                    <!-- Output -->
+                    <details class="group">
+                      <summary class="cursor-pointer text-xs select-none flex items-center gap-1" style="color: var(--text-tertiary);">
+                        <span class="group-open:hidden">&#9654; 顯示輸出</span>
+                        <span class="hidden group-open:inline">&#9660; 隱藏輸出</span>
+                      </summary>
+                      <div class="mt-2">
+                        <pre class="text-[10px] leading-relaxed font-mono p-3 rounded-lg border overflow-x-auto max-h-60 custom-scrollbar"
+                             style="background-color: var(--code-bg); border-color: var(--border-primary); color: var(--text-secondary);">{{ hideResolvedCmdMarker(log.output) }}</pre>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+                <!-- Desktop table (>= 768px) -->
+                <div class="hidden md:block overflow-x-auto rounded-xl border" style="background-color: var(--bg-secondary); border-color: var(--border-primary);">
+                  <table class="w-full text-left border-collapse min-w-[640px]">
+                    <thead>
+                      <tr style="background-color: var(--bg-tertiary);">
+                        <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">時間</th>
+                        <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">狀態</th>
+                        <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">類型</th>
+                        <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">指令</th>
+                        <th class="py-3 px-4 border-b text-xs uppercase font-semibold" style="border-color: var(--border-primary); color: var(--text-tertiary);">輸出結果</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="log in sortedAuditLogs" :key="log.id" class="transition-colors border-b" style="border-color: var(--border-primary);"
+                          @mouseenter="$event.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'"
+                          @mouseleave="$event.currentTarget.style.backgroundColor = 'transparent'">
+                        <td class="py-3 px-4 text-xs whitespace-nowrap font-mono" style="color: var(--text-tertiary);">{{ formatDate(log.executionTime) }}</td>
+                        <td class="py-3 px-4">
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                :style="log.success
+                                  ? { backgroundColor: 'color-mix(in srgb, var(--accent-success) 15%, transparent)', color: 'var(--accent-success)' }
+                                  : { backgroundColor: 'color-mix(in srgb, var(--accent-danger) 15%, transparent)', color: 'var(--accent-danger)' }">
+                            {{ log.success ? 'SUCCESS' : 'FAILED' }}
+                          </span>
+                          <div v-if="!log.success && log.exitCode !== null && log.exitCode !== undefined"
+                               class="mt-1 text-[10px] font-mono"
+                               style="color: var(--text-tertiary);">
+                            exit: {{ log.exitCode }}
                           </div>
-                        </details>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                        </td>
+                        <td class="py-3 px-4">
+                          <span v-if="log.commandType === 'MODIFY'"
+                                class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                style="background-color: color-mix(in srgb, var(--accent-warning) 15%, transparent); color: var(--accent-warning);">
+                            MODIFY
+                          </span>
+                          <span v-else
+                                class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                style="background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent); color: var(--text-tertiary);">
+                            READ
+                          </span>
+                        </td>
+                        <td class="py-3 px-4">
+                          <code class="text-xs font-mono px-2 py-1 rounded border" style="background-color: var(--code-bg); border-color: var(--border-primary); color: var(--code-text);">{{ log.command }}</code>
+                        </td>
+                        <td class="py-3 px-4">
+                          <details class="group">
+                            <summary class="cursor-pointer text-xs select-none flex items-center gap-1" style="color: var(--text-tertiary);">
+                              <span class="group-open:hidden">&#9654; 顯示輸出</span>
+                              <span class="hidden group-open:inline">&#9660; 隱藏輸出</span>
+                            </summary>
+                            <div class="mt-2">
+                              <pre class="text-[10px] leading-relaxed font-mono p-3 rounded-lg border overflow-x-auto max-h-60 custom-scrollbar"
+                                   style="background-color: var(--code-bg); border-color: var(--border-primary); color: var(--text-secondary);">{{ hideResolvedCmdMarker(log.output) }}</pre>
+                            </div>
+                          </details>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
               <div v-if="auditPage.totalElements > 0" class="flex items-center justify-between gap-3 px-1">
                 <span class="text-xs" style="color: var(--text-tertiary);">
@@ -1031,5 +1114,26 @@ const purgeCommands = async () => {
 }
 .admin-input:focus {
   border-color: var(--accent-primary);
+}
+
+.admin-inline-alert {
+  background-color: color-mix(in srgb, var(--accent-danger) 12%, var(--bg-secondary));
+  border-color: color-mix(in srgb, var(--accent-danger) 28%, transparent);
+  color: var(--text-primary);
+}
+
+.admin-inline-alert-close {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.125rem 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.admin-inline-alert-close:hover {
+  color: var(--text-primary);
 }
 </style>

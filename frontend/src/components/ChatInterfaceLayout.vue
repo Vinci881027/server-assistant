@@ -1,10 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import Sidebar from './Sidebar.vue'
 import ChatHeader from './ChatHeader.vue'
 import MessageList from './MessageList.vue'
 
 const sidebarRef = ref(null)
+const messageListRef = ref(null)
 
 defineExpose({
   focusSearchInput() {
@@ -12,9 +13,10 @@ defineExpose({
   },
 })
 
-defineProps({
+const props = defineProps({
   isMobileViewport: { type: Boolean, required: true },
   isSidebarOpen: { type: Boolean, required: true },
+  isConversationsLoading: { type: Boolean, default: false },
   conversations: { type: Array, required: true },
   currentConversationId: { type: String, default: '' },
   serverIp: { type: String, default: '' },
@@ -29,16 +31,37 @@ defineProps({
   availableModels: { type: Object, default: () => ({}) },
   statusMessage: { type: String, default: '' },
   isRetrying: { type: Boolean, default: false },
+  toolCallStatus: { type: String, default: null },
   retryCountdown: { type: Object, default: () => ({}) },
   onRetry: { type: Function, default: null },
   onCancelRetry: { type: Function, default: null },
   canRegenerateMessage: { type: Function, default: null },
   hasMoreFromServer: { type: Boolean, default: false },
   isHistoryLoading: { type: Boolean, default: false },
+  historyLoadFailed: { type: Boolean, default: false },
   isLoadingMore: { type: Boolean, default: false },
 })
 
-const emit = defineEmits([
+const pendingCommandMsg = computed(() => {
+  if (!props.messages) return null
+  for (let i = props.messages.length - 1; i >= 0; i--) {
+    const msg = props.messages[i]
+    if (msg?.command?.status === 'pending') return msg
+  }
+  return null
+})
+
+const pendingCommandPreview = computed(() => {
+  const cmd = pendingCommandMsg.value?.command?.content
+  if (!cmd) return ''
+  return cmd.length > 40 ? cmd.slice(0, 38) + '…' : cmd
+})
+
+function jumpToPendingCommand() {
+  messageListRef.value?.scrollToPendingCommand()
+}
+
+defineEmits([
   'touchstart',
   'touchmove',
   'touchend',
@@ -59,6 +82,7 @@ const emit = defineEmits([
   'edit-message',
   'regenerate-message',
   'load-more',
+  'retry-history',
 ])
 </script>
 
@@ -85,6 +109,7 @@ const emit = defineEmits([
       ref="sidebarRef"
       :class="isMobileViewport ? 'mobile-sidebar-panel absolute inset-y-0 left-0 z-40 shadow-2xl' : ''"
       :isOpen="isSidebarOpen"
+      :loading="isConversationsLoading"
       :conversations="conversations"
       :currentId="currentConversationId"
       @new-chat="$emit('new-chat')"
@@ -134,8 +159,25 @@ const emit = defineEmits([
         </template>
       </ChatHeader>
 
+      <!-- Pending command sticky banner -->
+      <Transition name="pending-banner">
+        <div v-if="pendingCommandMsg"
+             class="pending-cmd-banner"
+             role="alert"
+             aria-live="polite"
+             aria-atomic="true">
+          <span class="pending-cmd-banner-icon" aria-hidden="true">⚠️</span>
+          <span class="pending-cmd-banner-text">有待確認的高風險指令：</span>
+          <code class="pending-cmd-banner-cmd">{{ pendingCommandPreview }}</code>
+          <button type="button" class="pending-cmd-banner-jump" @click="jumpToPendingCommand">
+            跳轉確認 →
+          </button>
+        </div>
+      </Transition>
+
       <!-- Message List -->
       <MessageList
+        ref="messageListRef"
         class="flex-1 min-h-0"
         :messages="messages"
         :isProcessing="isProcessing"
@@ -150,24 +192,96 @@ const emit = defineEmits([
         :availableModels="availableModels"
         :statusMessage="statusMessage"
         :isRetrying="isRetrying"
+        :toolCallStatus="toolCallStatus"
         :retryCountdown="retryCountdown"
         :onRetry="onRetry"
         :onCancelRetry="onCancelRetry"
         :canRegenerateMessage="canRegenerateMessage"
         :hasMoreFromServer="hasMoreFromServer"
         :isHistoryLoading="isHistoryLoading"
+        :historyLoadFailed="historyLoadFailed"
         :isLoadingMore="isLoadingMore"
         @send="$emit('send', $event)"
         @stop="$emit('stop')"
         @edit-message="$emit('edit-message', $event)"
         @regenerate-message="$emit('regenerate-message', $event)"
         @load-more="$emit('load-more')"
+        @retry-history="$emit('retry-history')"
       />
     </div>
   </div>
 </template>
 
 <style scoped>
+/* Pending command sticky banner */
+.pending-cmd-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-warning) 40%, transparent);
+  background-color: color-mix(in srgb, var(--accent-warning) 12%, var(--bg-primary));
+  color: var(--text-primary);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.pending-cmd-banner-icon {
+  flex-shrink: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+.pending-cmd-banner-text {
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.pending-cmd-banner-cmd {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--accent-warning);
+  background-color: color-mix(in srgb, var(--accent-warning) 14%, transparent);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+  max-width: 280px;
+}
+.pending-cmd-banner-jump {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-warning) 50%, transparent);
+  background-color: color-mix(in srgb, var(--accent-warning) 18%, transparent);
+  color: var(--accent-warning);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+.pending-cmd-banner-jump:hover {
+  background-color: color-mix(in srgb, var(--accent-warning) 28%, transparent);
+}
+
+/* Banner transition */
+.pending-banner-enter-active,
+.pending-banner-leave-active {
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+  max-height: 48px;
+}
+.pending-banner-enter-from,
+.pending-banner-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
 .mobile-sidebar-backdrop {
   border: none;
   background: rgba(8, 13, 20, 0.42);

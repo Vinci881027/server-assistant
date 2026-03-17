@@ -40,7 +40,7 @@
             <span class="login-favicon-icon" v-html="faviconSvg" aria-hidden="true"></span>
           </div>
           <h1 class="text-2xl font-bold tracking-tight" style="color: var(--text-primary);">
-            CGV Lab Server Assistant
+            {{ APP_CONFIG.name }}
           </h1>
           <p class="mt-2 text-sm" style="color: var(--text-tertiary);">
             請輸入伺服器系統使用者帳號與密碼
@@ -119,22 +119,31 @@
             </div>
           </div>
 
+          <!-- Near-lockout warning -->
+          <div
+            v-if="lockoutWarning"
+            class="rounded-xl px-4 py-2.5 text-sm font-medium text-center"
+            style="background-color: color-mix(in srgb, var(--accent-warning) 15%, transparent); color: var(--accent-warning); border: 1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent);"
+          >
+            {{ lockoutWarning }}
+          </div>
+
           <!-- Submit button -->
           <button
             type="submit"
-            :disabled="isLoading"
+            :disabled="isLoading || isLockedOut"
             class="login-btn flex w-full justify-center items-center rounded-xl py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
             <svg v-if="isLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            {{ isLoading ? '驗證中...' : '登入' }}
+            {{ isLoading ? '驗證中...' : isLockedOut ? '帳號已鎖定' : '登入' }}
           </button>
 
           <!-- Message -->
-          <div v-if="message" class="text-center text-sm font-medium" :style="{ color: isError ? 'var(--accent-danger)' : 'var(--accent-success)' }">
-            {{ message }}
+          <div v-if="displayMessage" class="text-center text-sm font-medium" :style="{ color: (isError || isLockedOut) ? 'var(--accent-danger)' : 'var(--accent-success)' }">
+            {{ displayMessage }}
           </div>
         </form>
       </div>
@@ -148,9 +157,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { APP_CONFIG } from '../config/app.config'
 import { useThemeStore } from '../stores/themeStore'
 import { useAuthStore } from '../stores/authStore'
+import {
+  formatLockoutWarning,
+  formatLockoutCountdown,
+  LOCKOUT_WARNING_THRESHOLD,
+} from '../utils/loginLockout'
 import faviconSvg from '../assets/favicon.svg?raw'
 
 const themeStore = useThemeStore()
@@ -164,24 +179,58 @@ const message = ref('')
 const isError = ref(false)
 const isMounted = ref(false)
 const showPassword = ref(false)
+const lockoutSeconds = ref(0)
+const remainingAttempts = ref(null)
+const lockoutIntervalId = ref(null)
+
+const LOGIN_ERROR_MESSAGES = {
+  invalidCredentials: '密碼或帳號錯誤',
+  network: '無法連線伺服器，請確認網路',
+}
+
+const isLockedOut = computed(() => lockoutSeconds.value > 0)
+
+const displayMessage = computed(() => {
+  if (lockoutSeconds.value > 0) {
+    return `帳號已鎖定，請等待 ${formatLockoutCountdown(lockoutSeconds.value)} 後再試`
+  }
+  return message.value
+})
+
+const lockoutWarning = computed(() => formatLockoutWarning(remainingAttempts.value))
+
+function startLockoutCountdown(seconds) {
+  if (lockoutIntervalId.value) {
+    clearInterval(lockoutIntervalId.value)
+  }
+  lockoutSeconds.value = Math.max(1, Math.ceil(Number(seconds)))
+  remainingAttempts.value = null
+  lockoutIntervalId.value = setInterval(() => {
+    lockoutSeconds.value--
+    if (lockoutSeconds.value <= 0) {
+      clearInterval(lockoutIntervalId.value)
+      lockoutIntervalId.value = null
+      lockoutSeconds.value = 0
+    }
+  }, 1000)
+}
 
 onMounted(() => {
   requestAnimationFrame(() => isMounted.value = true)
 })
 
-const formatLockoutMessage = (retryAfterSeconds) => {
-  const parsedSeconds = Number(retryAfterSeconds)
-  if (!Number.isFinite(parsedSeconds) || parsedSeconds <= 0) {
-    return null
+onUnmounted(() => {
+  if (lockoutIntervalId.value) {
+    clearInterval(lockoutIntervalId.value)
   }
-  const retryAfterMinutes = Math.max(1, Math.ceil(parsedSeconds / 60))
-  return `帳號已鎖定，請 ${retryAfterMinutes} 分鐘後再試`
-}
+})
 
 const handleLogin = async () => {
+  if (isLockedOut.value) return
   isLoading.value = true
   message.value = ''
   isError.value = false
+  remainingAttempts.value = null
 
   try {
     const result = await authStore.login(username.value, password.value)
@@ -192,21 +241,37 @@ const handleLogin = async () => {
     } else {
       isError.value = true
       if (result.code === 'LOGIN_RATE_LIMITED') {
-        const lockoutMessage = formatLockoutMessage(result.data?.retryAfterSeconds)
-        if (lockoutMessage) {
-          message.value = lockoutMessage
-          return
-        }
+        startLockoutCountdown(result.data?.retryAfterSeconds || 60)
+        return
       }
-      message.value = result.message || result.error?.message || '登入失敗：使用者名稱不存在或密碼錯誤'
+      if (isNetworkLoginFailure(result)) {
+        message.value = LOGIN_ERROR_MESSAGES.network
+        return
+      }
+      const remaining = result.data?.remainingAttempts
+      if (remaining != null && remaining <= LOCKOUT_WARNING_THRESHOLD) {
+        remainingAttempts.value = remaining
+      }
+      message.value = LOGIN_ERROR_MESSAGES.invalidCredentials
     }
   } catch (error) {
     isError.value = true
-    message.value = '連線錯誤：無法連接到後端伺服器'
+    message.value = LOGIN_ERROR_MESSAGES.network
     console.error('Login error:', error)
   } finally {
     isLoading.value = false
   }
+}
+
+function isNetworkLoginFailure(result) {
+  const transportCode = (result?.transportCode || '').toString().toUpperCase()
+  if (transportCode === 'ERR_NETWORK') return true
+
+  const normalizedMessage = `${result?.message || ''} ${result?.error?.message || ''}`.toLowerCase()
+  return normalizedMessage.includes('network error') ||
+    normalizedMessage.includes('failed to fetch') ||
+    normalizedMessage.includes('連線錯誤') ||
+    normalizedMessage.includes('無法連線')
 }
 </script>
 

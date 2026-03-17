@@ -41,7 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
    * Login with username and password
    * @param {string} username - Linux system username
    * @param {string} password - User password
-   * @returns {Promise<{success: boolean, message: string, code?: string, data?: object}>}
+   * @returns {Promise<{success: boolean, message: string, code?: string, data?: object, transportCode?: string}>}
    */
   async function login(username, password) {
     try {
@@ -63,6 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
         message: error.message || 'Login failed',
         code: apiCode,
         data: apiData,
+        transportCode: error?.code || null,
       }
     }
   }

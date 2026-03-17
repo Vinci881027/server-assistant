@@ -92,6 +92,7 @@ public class ChatService {
     private final ConfirmCommandHandler confirmCommandHandler;
     private final UserContext userContext;
     private final AiStreamRetryCoordinator retryCoordinator;
+    private final ToolStatusBus toolStatusBus;
     private final List<String> groqApiKeys;
     private final AtomicInteger groqApiKeyCursor = new AtomicInteger(0);
     private final int globalAiStreamConcurrency;
@@ -134,6 +135,7 @@ public class ChatService {
             ConfirmCommandHandler confirmCommandHandler,
             UserContext userContext,
             AiStreamRetryCoordinator retryCoordinator,
+            ToolStatusBus toolStatusBus,
             @Value("${spring.ai.openai.api-key:}") String primaryGroqApiKey,
             @Value("${app.security.chat.global-concurrent-ai-streams:10}") int globalAiStreamConcurrency) {
         this.jpaChatMemory = jpaChatMemory;
@@ -150,6 +152,7 @@ public class ChatService {
         this.confirmCommandHandler = confirmCommandHandler;
         this.userContext = userContext;
         this.retryCoordinator = retryCoordinator;
+        this.toolStatusBus = toolStatusBus;
         validatePrimaryGroqApiKey(primaryGroqApiKey);
         this.globalAiStreamConcurrency = sanitizeGlobalAiStreamConcurrency(globalAiStreamConcurrency);
         this.globalAiStreamSemaphore = new Semaphore(this.globalAiStreamConcurrency, true);
@@ -519,6 +522,10 @@ public class ChatService {
         AtomicReference<Long> totalUsageTokens = new AtomicReference<>(null);
         String dynamicSystemContext = buildDynamicSystemContext(username, conversationId, toolContextKey);
 
+        // Register a tool-status sink for this request. Tools emit [STATUS:…] events to it;
+        // the events are merged into the SSE stream so the frontend can show phase indicators.
+        reactor.core.publisher.Sinks.Many<String> toolStatusSink = toolStatusBus.createSink(toolContextKey);
+
         Flux<String> modelStream = streamModelContentWithResilience(
                 message,
                 dynamicSystemContext,
@@ -527,10 +534,13 @@ public class ChatService {
                 conversationId,
                 username,
                 selectedGroqApiKeyIndex,
-                totalUsageTokens);
+                totalUsageTokens)
+                .doFinally(signal -> toolStatusBus.complete(toolContextKey));
 
         Flux<String> response = withPendingPromptFallbackIfNoMarker(
-                trackStreamResponse(modelStream, streamChunkState),
+                trackStreamResponse(
+                        Flux.merge(toolStatusSink.asFlux(), modelStream),
+                        streamChunkState),
                 username,
                 streamChunkState)
                 .timeout(STREAM_TIMEOUT, Flux.just(STREAM_TIMEOUT_MESSAGE))

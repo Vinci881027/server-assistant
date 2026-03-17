@@ -97,4 +97,18 @@ class SlashCommandRouterTest {
         assertEquals(UserCommandConstants.LIST_LOGIN_USERS_COMMAND, command.command());
         assertTrue(command.responsePrefix().contains("系統使用者"));
     }
+
+    @Test
+    void route_help_shouldIncludeExclamationCommandUsage() {
+        when(adminAuthorizationService.isAdmin("alice")).thenReturn(false);
+
+        Optional<DeterministicRouter.Route> route =
+                router.route(new DeterministicRouter.Context("/help", "c1", "alice"));
+
+        assertTrue(route.isPresent());
+        assertTrue(route.get() instanceof DeterministicRouter.AssistantText);
+        String text = ((DeterministicRouter.AssistantText) route.get()).text();
+        assertTrue(text.contains("`!<command>`"));
+        assertTrue(text.contains("`!df -h`"));
+    }
 }

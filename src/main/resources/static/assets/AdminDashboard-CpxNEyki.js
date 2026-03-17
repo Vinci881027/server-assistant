@@ -1,7 +1,7 @@
-import { D as openBlock, E as onUnmounted, F as ref, I as unref, L as normalizeClass, M as watch, O as renderList, P as withDirectives, R as normalizeStyle, T as onMounted, _ as createElementBlock, f as Fragment, g as createCommentVNode, l as vModelText, m as createBaseVNode, o as vModelCheckbox, p as computed, y as createTextVNode, z as toDisplayString } from "./vendor-vue-DigYjX59.js";
-import { t as lib_default } from "./vendor-utils-BU-w9I5u.js";
-import { t as purify } from "./vendor-CmHsBc4_.js";
-import { a as __plugin_vue_export_helper_default, i as sanitizeFilenamePart, n as buildExportTimestamp, o as httpClient_default, r as downloadTextFile, s as useThemeStore, t as buildCsvText } from "./index-BNj87f6r.js";
+import { B as toDisplayString, D as onUnmounted, E as onMounted, F as withDirectives, I as ref, L as unref, N as watch, O as openBlock, R as normalizeClass, _ as createCommentVNode, b as createTextVNode, c as vModelCheckbox, h as createBaseVNode, k as renderList, m as computed, p as Fragment, u as vModelText, v as createElementBlock, z as normalizeStyle } from "./vendor-vue-DuDrcgjQ.js";
+import { t as lib_default } from "./vendor-utils-MwEYep9l.js";
+import { t as purify } from "./vendor-DQFcYRvF.js";
+import { a as __plugin_vue_export_helper_default, i as sanitizeFilenamePart, n as buildExportTimestamp, o as httpClient_default, r as downloadTextFile, s as useThemeStore, t as buildCsvText } from "./index-DPnfpOwV.js";
 
 //#region src/components/AdminDashboard.vue
 var _hoisted_1 = {
@@ -75,30 +75,25 @@ var _hoisted_15 = {
 };
 var _hoisted_16 = {
 	key: 0,
+	class: "mx-6 mt-4 rounded-lg border px-4 py-3 text-sm admin-inline-alert",
+	role: "alert"
+};
+var _hoisted_17 = { class: "flex items-start justify-between gap-4" };
+var _hoisted_18 = { class: "leading-relaxed" };
+var _hoisted_19 = {
+	key: 1,
 	class: "flex-1 overflow-y-auto p-8 custom-scrollbar"
 };
-var _hoisted_17 = {
+var _hoisted_20 = {
 	class: "mb-6 p-5 rounded-xl border",
 	style: {
 		"background-color": "var(--bg-secondary)",
 		"border-color": "var(--border-primary)"
 	}
 };
-var _hoisted_18 = { class: "flex items-center justify-between gap-4 mb-4" };
-var _hoisted_19 = ["disabled"];
-var _hoisted_20 = { class: "grid grid-cols-1 md:grid-cols-2 gap-3" };
-var _hoisted_21 = {
-	class: "text-xs",
-	style: { "color": "var(--text-tertiary)" }
-};
-var _hoisted_22 = {
-	class: "text-xs",
-	style: { "color": "var(--text-tertiary)" }
-};
-var _hoisted_23 = {
-	class: "text-xs md:col-span-2",
-	style: { "color": "var(--text-tertiary)" }
-};
+var _hoisted_21 = { class: "flex items-center justify-between gap-4 mb-4" };
+var _hoisted_22 = ["disabled"];
+var _hoisted_23 = { class: "grid grid-cols-1 md:grid-cols-2 gap-3" };
 var _hoisted_24 = {
 	class: "text-xs",
 	style: { "color": "var(--text-tertiary)" }
@@ -108,59 +103,71 @@ var _hoisted_25 = {
 	style: { "color": "var(--text-tertiary)" }
 };
 var _hoisted_26 = {
-	class: "text-xs flex items-center gap-2",
+	class: "text-xs md:col-span-2",
 	style: { "color": "var(--text-tertiary)" }
 };
 var _hoisted_27 = {
+	class: "text-xs",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_28 = {
+	class: "text-xs",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_29 = {
+	class: "text-xs flex items-center gap-2",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_30 = {
 	key: 0,
 	class: "mt-3 text-[11px]",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_28 = { class: "grid gap-3" };
-var _hoisted_29 = { class: "flex items-start justify-between gap-4" };
-var _hoisted_30 = { class: "min-w-0" };
-var _hoisted_31 = {
+var _hoisted_31 = { class: "grid gap-3" };
+var _hoisted_32 = { class: "flex items-start justify-between gap-4" };
+var _hoisted_33 = { class: "min-w-0" };
+var _hoisted_34 = {
 	class: "font-mono text-sm truncate",
 	style: { "color": "var(--text-primary)" }
 };
-var _hoisted_32 = { class: "flex items-center gap-2 flex-shrink-0" };
-var _hoisted_33 = {
+var _hoisted_35 = { class: "flex items-center gap-2 flex-shrink-0" };
+var _hoisted_36 = {
 	class: "text-xs flex items-center gap-1.5",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_34 = ["onUpdate:modelValue"];
-var _hoisted_35 = ["onClick", "disabled"];
-var _hoisted_36 = ["onClick", "disabled"];
-var _hoisted_37 = { class: "mt-4 grid grid-cols-1 md:grid-cols-2 gap-3" };
-var _hoisted_38 = {
+var _hoisted_37 = ["onUpdate:modelValue"];
+var _hoisted_38 = ["onClick", "disabled"];
+var _hoisted_39 = ["onClick", "disabled"];
+var _hoisted_40 = { class: "mt-4 grid grid-cols-1 md:grid-cols-2 gap-3" };
+var _hoisted_41 = {
 	class: "text-xs",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_39 = ["onUpdate:modelValue"];
-var _hoisted_40 = {
+var _hoisted_42 = ["onUpdate:modelValue"];
+var _hoisted_43 = {
 	class: "text-xs",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_41 = ["onUpdate:modelValue"];
-var _hoisted_42 = {
+var _hoisted_44 = ["onUpdate:modelValue"];
+var _hoisted_45 = {
 	class: "text-xs md:col-span-2",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_43 = ["onUpdate:modelValue"];
-var _hoisted_44 = {
+var _hoisted_46 = ["onUpdate:modelValue"];
+var _hoisted_47 = {
 	class: "text-xs",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_45 = ["onUpdate:modelValue"];
-var _hoisted_46 = {
-	key: 1,
+var _hoisted_48 = ["onUpdate:modelValue"];
+var _hoisted_49 = {
+	key: 2,
 	class: "flex-1 overflow-y-auto p-6 custom-scrollbar"
 };
-var _hoisted_47 = {
+var _hoisted_50 = {
 	key: 0,
 	class: "mb-4 flex flex-wrap items-center gap-2"
 };
-var _hoisted_48 = {
+var _hoisted_51 = {
 	class: "text-xs font-mono px-2 py-1 rounded-lg border",
 	style: {
 		"background-color": "var(--bg-secondary)",
@@ -168,25 +175,25 @@ var _hoisted_48 = {
 		"color": "var(--text-primary)"
 	}
 };
-var _hoisted_49 = {
+var _hoisted_52 = {
 	class: "text-[10px]",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_50 = ["disabled"];
-var _hoisted_51 = ["disabled"];
-var _hoisted_52 = ["disabled"];
 var _hoisted_53 = ["disabled"];
 var _hoisted_54 = ["disabled"];
-var _hoisted_55 = {
+var _hoisted_55 = ["disabled"];
+var _hoisted_56 = ["disabled"];
+var _hoisted_57 = ["disabled"];
+var _hoisted_58 = {
 	key: 1,
 	class: "-mt-2 mb-4 text-[11px]",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_56 = {
+var _hoisted_59 = {
 	key: 2,
-	class: "h-full flex flex-col items-center justify-center opacity-40"
+	class: "h-full flex flex-col items-center justify-center opacity-60"
 };
-var _hoisted_57 = {
+var _hoisted_60 = {
 	xmlns: "http://www.w3.org/2000/svg",
 	class: "h-16 w-16 mb-4",
 	fill: "none",
@@ -194,68 +201,62 @@ var _hoisted_57 = {
 	stroke: "currentColor",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_58 = {
+var _hoisted_61 = {
 	key: 3,
 	class: "flex justify-center mt-20"
 };
-var _hoisted_59 = {
+var _hoisted_62 = {
 	key: 4,
 	class: "space-y-4"
 };
-var _hoisted_60 = {
+var _hoisted_63 = {
 	key: 0,
 	class: "text-center py-10",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_61 = {
-	key: 1,
-	class: "overflow-hidden rounded-xl border",
-	style: {
-		"background-color": "var(--bg-secondary)",
-		"border-color": "var(--border-primary)"
-	}
-};
-var _hoisted_62 = { class: "w-full text-left border-collapse" };
-var _hoisted_63 = {
-	class: "py-3 px-4 text-xs whitespace-nowrap font-mono",
-	style: { "color": "var(--text-tertiary)" }
-};
-var _hoisted_64 = { class: "py-3 px-4" };
-var _hoisted_65 = {
-	key: 0,
-	class: "mt-1 text-[10px] font-mono",
-	style: { "color": "var(--text-tertiary)" }
-};
-var _hoisted_66 = { class: "py-3 px-4" };
+var _hoisted_64 = { key: 1 };
+var _hoisted_65 = { class: "md:hidden space-y-2" };
+var _hoisted_66 = { class: "flex flex-wrap items-center gap-2" };
 var _hoisted_67 = {
+	class: "text-[11px] font-mono",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_68 = {
 	key: 0,
+	class: "text-[10px] font-mono",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_69 = {
+	key: 1,
 	class: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
 	style: {
 		"background-color": "color-mix(in srgb, var(--accent-warning) 15%, transparent)",
 		"color": "var(--accent-warning)"
 	}
 };
-var _hoisted_68 = {
-	key: 1,
+var _hoisted_70 = {
+	key: 2,
 	class: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
 	style: {
 		"background-color": "color-mix(in srgb, var(--accent-primary) 10%, transparent)",
 		"color": "var(--text-tertiary)"
 	}
 };
-var _hoisted_69 = { class: "py-3 px-4" };
-var _hoisted_70 = {
-	class: "text-xs font-mono px-2 py-1 rounded border",
+var _hoisted_71 = { class: "overflow-x-auto" };
+var _hoisted_72 = {
+	class: "text-xs font-mono px-2 py-1 rounded border break-all",
 	style: {
 		"background-color": "var(--code-bg)",
 		"border-color": "var(--border-primary)",
-		"color": "var(--code-text)"
+		"color": "var(--code-text)",
+		"display": "block",
+		"white-space": "pre-wrap",
+		"word-break": "break-all"
 	}
 };
-var _hoisted_71 = { class: "py-3 px-4" };
-var _hoisted_72 = { class: "group" };
-var _hoisted_73 = { class: "mt-2" };
-var _hoisted_74 = {
+var _hoisted_73 = { class: "group" };
+var _hoisted_74 = { class: "mt-2" };
+var _hoisted_75 = {
 	class: "text-[10px] leading-relaxed font-mono p-3 rounded-lg border overflow-x-auto max-h-60 custom-scrollbar",
 	style: {
 		"background-color": "var(--code-bg)",
@@ -263,48 +264,103 @@ var _hoisted_74 = {
 		"color": "var(--text-secondary)"
 	}
 };
-var _hoisted_75 = {
+var _hoisted_76 = {
+	class: "hidden md:block overflow-x-auto rounded-xl border",
+	style: {
+		"background-color": "var(--bg-secondary)",
+		"border-color": "var(--border-primary)"
+	}
+};
+var _hoisted_77 = { class: "w-full text-left border-collapse min-w-[640px]" };
+var _hoisted_78 = {
+	class: "py-3 px-4 text-xs whitespace-nowrap font-mono",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_79 = { class: "py-3 px-4" };
+var _hoisted_80 = {
+	key: 0,
+	class: "mt-1 text-[10px] font-mono",
+	style: { "color": "var(--text-tertiary)" }
+};
+var _hoisted_81 = { class: "py-3 px-4" };
+var _hoisted_82 = {
+	key: 0,
+	class: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
+	style: {
+		"background-color": "color-mix(in srgb, var(--accent-warning) 15%, transparent)",
+		"color": "var(--accent-warning)"
+	}
+};
+var _hoisted_83 = {
+	key: 1,
+	class: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
+	style: {
+		"background-color": "color-mix(in srgb, var(--accent-primary) 10%, transparent)",
+		"color": "var(--text-tertiary)"
+	}
+};
+var _hoisted_84 = { class: "py-3 px-4" };
+var _hoisted_85 = {
+	class: "text-xs font-mono px-2 py-1 rounded border",
+	style: {
+		"background-color": "var(--code-bg)",
+		"border-color": "var(--border-primary)",
+		"color": "var(--code-text)"
+	}
+};
+var _hoisted_86 = { class: "py-3 px-4" };
+var _hoisted_87 = { class: "group" };
+var _hoisted_88 = { class: "mt-2" };
+var _hoisted_89 = {
+	class: "text-[10px] leading-relaxed font-mono p-3 rounded-lg border overflow-x-auto max-h-60 custom-scrollbar",
+	style: {
+		"background-color": "var(--code-bg)",
+		"border-color": "var(--border-primary)",
+		"color": "var(--text-secondary)"
+	}
+};
+var _hoisted_90 = {
 	key: 2,
 	class: "flex items-center justify-between gap-3 px-1"
 };
-var _hoisted_76 = {
+var _hoisted_91 = {
 	class: "text-xs",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_77 = { class: "flex items-center gap-2" };
-var _hoisted_78 = ["disabled"];
-var _hoisted_79 = ["disabled"];
-var _hoisted_80 = {
+var _hoisted_92 = { class: "flex items-center gap-2" };
+var _hoisted_93 = ["disabled"];
+var _hoisted_94 = ["disabled"];
+var _hoisted_95 = {
 	key: 5,
 	class: "space-y-4 max-w-4xl mx-auto"
 };
-var _hoisted_81 = {
+var _hoisted_96 = {
 	key: 0,
 	class: "text-center py-10",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_82 = { class: "flex-1 min-w-0" };
-var _hoisted_83 = { class: "flex items-baseline gap-2 mb-1" };
-var _hoisted_84 = {
+var _hoisted_97 = { class: "flex-1 min-w-0" };
+var _hoisted_98 = { class: "flex items-baseline gap-2 mb-1" };
+var _hoisted_99 = {
 	class: "text-sm font-semibold",
 	style: { "color": "var(--text-primary)" }
 };
-var _hoisted_85 = {
+var _hoisted_100 = {
 	class: "text-[10px]",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_86 = ["innerHTML"];
-var _hoisted_87 = {
+var _hoisted_101 = ["innerHTML"];
+var _hoisted_102 = {
 	key: 1,
 	class: "flex items-center justify-between gap-3 px-1"
 };
-var _hoisted_88 = {
+var _hoisted_103 = {
 	class: "text-xs",
 	style: { "color": "var(--text-tertiary)" }
 };
-var _hoisted_89 = { class: "flex items-center gap-2" };
-var _hoisted_90 = ["disabled"];
-var _hoisted_91 = ["disabled"];
+var _hoisted_104 = { class: "flex items-center gap-2" };
+var _hoisted_105 = ["disabled"];
+var _hoisted_106 = ["disabled"];
 var DEFAULT_PAGE = 0;
 var DEFAULT_SIZE = 100;
 var EXPORT_PAGE_SIZE = 500;
@@ -359,6 +415,7 @@ var _sfc_main = {
 		const exportMessage = ref("");
 		const isModelSaving = ref(false);
 		const modelMessage = ref("");
+		const adminError = ref("");
 		const lastAuditUpdatedAt = ref(null);
 		const lastHistoryUpdatedAt = ref(null);
 		let autoRefreshTimerId = null;
@@ -384,13 +441,24 @@ var _sfc_main = {
 			category: "Other",
 			enabled: true
 		});
+		const clearAdminError = () => {
+			adminError.value = "";
+		};
+		const reportAdminApiError = (action, error, fallbackMessage = `${action}失敗`) => {
+			console.error(`[AdminDashboard] ${action} failed:`, error);
+			const fallback = typeof fallbackMessage === "string" && fallbackMessage.trim() ? fallbackMessage.trim() : `${action}失敗`;
+			const reason = typeof error?.message === "string" ? error.message.trim() : "";
+			adminError.value = !reason || reason === fallback ? fallback : `${fallback}：${reason}`;
+			return adminError.value;
+		};
 		const fetchUsers = async () => {
 			try {
 				const res = await httpClient_default.get("/admin/users");
 				const payload = Array.isArray(res?.data?.data) ? res.data.data : res?.data;
 				users.value = Array.isArray(payload) ? payload : [];
+				clearAdminError();
 			} catch (e) {
-				console.error(e);
+				reportAdminApiError("載入使用者列表", e);
 			}
 		};
 		const applyPageState = (target, payload, fallbackPage) => {
@@ -481,8 +549,9 @@ var _sfc_main = {
 				auditLogs.value = sortAuditLogsNewestFirst(Array.isArray(payload.items) ? payload.items : []);
 				applyPageState(auditPage, payload, safePage);
 				lastAuditUpdatedAt.value = Date.now();
+				clearAdminError();
 			} catch (e) {
-				console.error(e);
+				reportAdminApiError("載入指令審計紀錄", e);
 			} finally {
 				if (!silent) isLoading.value = false;
 			}
@@ -510,8 +579,9 @@ var _sfc_main = {
 				chatHistory.value = Array.isArray(payload.items) ? payload.items : [];
 				applyPageState(historyPage, payload, safePage);
 				lastHistoryUpdatedAt.value = Date.now();
+				clearAdminError();
 			} catch (e) {
-				console.error(e);
+				reportAdminApiError("載入對話紀錄", e);
 			} finally {
 				if (!silent) isLoading.value = false;
 			}
@@ -519,8 +589,9 @@ var _sfc_main = {
 		const fetchModels = async () => {
 			try {
 				models.value = (await httpClient_default.get("/admin/models"))?.data || [];
+				clearAdminError();
 			} catch (e) {
-				console.error(e);
+				reportAdminApiError("載入模型列表", e);
 			}
 		};
 		const saveModel = async (model) => {
@@ -538,10 +609,10 @@ var _sfc_main = {
 				};
 				await httpClient_default.post("/admin/models", payload);
 				modelMessage.value = `已儲存模型：${model.id}`;
+				clearAdminError();
 				await fetchModels();
 			} catch (e) {
-				console.error(e);
-				modelMessage.value = e?.message || "儲存失敗";
+				modelMessage.value = reportAdminApiError("儲存模型", e, "儲存失敗");
 			} finally {
 				isModelSaving.value = false;
 			}
@@ -573,10 +644,10 @@ var _sfc_main = {
 					category: "Other",
 					enabled: true
 				};
+				clearAdminError();
 				await fetchModels();
 			} catch (e) {
-				console.error(e);
-				modelMessage.value = e?.message || "新增失敗";
+				modelMessage.value = reportAdminApiError("新增模型", e, "新增失敗");
 			} finally {
 				isModelSaving.value = false;
 			}
@@ -589,10 +660,10 @@ var _sfc_main = {
 			try {
 				await httpClient_default.delete(`/admin/models/${encodeURIComponent(id)}`);
 				modelMessage.value = `已刪除模型：${id}`;
+				clearAdminError();
 				await fetchModels();
 			} catch (e) {
-				console.error(e);
-				modelMessage.value = e?.message || "刪除失敗";
+				modelMessage.value = reportAdminApiError("刪除模型", e, "刪除失敗");
 			} finally {
 				isModelSaving.value = false;
 			}
@@ -603,11 +674,13 @@ var _sfc_main = {
 			lastAuditUpdatedAt.value = null;
 			lastHistoryUpdatedAt.value = null;
 			exportMessage.value = "";
+			clearAdminError();
 			if (activeTab.value === "audit") fetchAuditLogs(DEFAULT_PAGE);
 			if (activeTab.value === "history") fetchHistory(DEFAULT_PAGE);
 		});
 		watch(activeTab, (newTab) => {
 			exportMessage.value = "";
+			clearAdminError();
 			if (newTab === "models") fetchModels();
 			else if (selectedUser.value) {
 				if (newTab === "audit") fetchAuditLogs(auditPage.value.page);
@@ -727,9 +800,9 @@ var _sfc_main = {
 				const csvText = buildCsvText(csvHeaders, csvRows);
 				downloadTextFile(`${sanitizeFilenamePart(username, "user")}-${activeTab.value}-${buildExportTimestamp()}.csv`, `\uFEFF${csvText}`, "text/csv;charset=utf-8");
 				exportMessage.value = `已匯出 ${label} CSV（${csvRows.length} 筆）`;
+				clearAdminError();
 			} catch (e) {
-				console.error(e);
-				exportMessage.value = e?.message || "匯出失敗";
+				exportMessage.value = reportAdminApiError("匯出 CSV", e, "匯出失敗");
 			} finally {
 				isExporting.value = false;
 			}
@@ -770,6 +843,7 @@ var _sfc_main = {
 			try {
 				const deletedChat = ((await httpClient_default.delete(`/admin/purge/users/${encodeURIComponent(selectedUser.value)}/chats`))?.data)?.data?.deletedChatMessages ?? 0;
 				purgeMessage.value = `已清除 ${selectedUser.value}：對話 ${deletedChat} 筆`;
+				clearAdminError();
 				notifyConversationsUpdated();
 				const before = selectedUser.value;
 				await fetchUsers();
@@ -778,8 +852,7 @@ var _sfc_main = {
 					resetPagedData();
 				} else await fetchHistory(DEFAULT_PAGE);
 			} catch (e) {
-				console.error(e);
-				purgeMessage.value = e?.message || "清除失敗";
+				purgeMessage.value = reportAdminApiError("清除使用者對話紀錄", e, "清除失敗");
 			} finally {
 				isPurging.value = false;
 			}
@@ -792,11 +865,11 @@ var _sfc_main = {
 			try {
 				const deletedCmd = ((await httpClient_default.delete(`/admin/purge/users/${encodeURIComponent(selectedUser.value)}/commands`))?.data)?.data?.deletedCommandLogs ?? 0;
 				purgeMessage.value = `已清除 ${selectedUser.value}：指令 ${deletedCmd} 筆`;
+				clearAdminError();
 				auditLogs.value = [];
 				if (activeTab.value === "audit") await fetchAuditLogs(DEFAULT_PAGE);
 			} catch (e) {
-				console.error(e);
-				purgeMessage.value = e?.message || "清除失敗";
+				purgeMessage.value = reportAdminApiError("清除使用者指令紀錄", e, "清除失敗");
 			} finally {
 				isPurging.value = false;
 			}
@@ -810,6 +883,7 @@ var _sfc_main = {
 				const user = selectedUser.value;
 				const data = (await httpClient_default.delete(`/admin/purge/users/${encodeURIComponent(user)}/activity`))?.data;
 				purgeMessage.value = `已清除 ${user}：對話 ${data?.data?.deletedChatMessages ?? 0} 筆、指令 ${data?.data?.deletedCommandLogs ?? 0} 筆`;
+				clearAdminError();
 				notifyConversationsUpdated();
 				await fetchUsers();
 				if (!users.value.includes(user)) {
@@ -821,8 +895,7 @@ var _sfc_main = {
 					if (activeTab.value === "history") await fetchHistory(DEFAULT_PAGE);
 				}
 			} catch (e) {
-				console.error(e);
-				purgeMessage.value = e?.message || "清除失敗";
+				purgeMessage.value = reportAdminApiError("清除使用者活動紀錄", e, "清除失敗");
 			} finally {
 				isPurging.value = false;
 			}
@@ -833,13 +906,13 @@ var _sfc_main = {
 			purgeMessage.value = "";
 			try {
 				purgeMessage.value = `已清除：對話 ${((await httpClient_default.delete("/admin/purge/chats"))?.data)?.data?.deletedChatMessages ?? 0} 筆`;
+				clearAdminError();
 				notifyConversationsUpdated();
 				selectedUser.value = "";
 				resetPagedData();
 				await fetchUsers();
 			} catch (e) {
-				console.error(e);
-				purgeMessage.value = e?.message || "清除失敗";
+				purgeMessage.value = reportAdminApiError("清除所有對話紀錄", e, "清除失敗");
 			} finally {
 				isPurging.value = false;
 			}
@@ -850,11 +923,11 @@ var _sfc_main = {
 			purgeMessage.value = "";
 			try {
 				purgeMessage.value = `已清除：指令 ${((await httpClient_default.delete("/admin/purge/commands"))?.data)?.data?.deletedCommandLogs ?? 0} 筆`;
+				clearAdminError();
 				auditLogs.value = [];
 				if (activeTab.value === "audit" && selectedUser.value) await fetchAuditLogs(DEFAULT_PAGE);
 			} catch (e) {
-				console.error(e);
-				purgeMessage.value = e?.message || "清除失敗";
+				purgeMessage.value = reportAdminApiError("清除所有指令紀錄", e, "清除失敗");
 			} finally {
 				isPurging.value = false;
 			}
@@ -874,7 +947,8 @@ var _sfc_main = {
 					"background-color": "var(--bg-tertiary)",
 					"border-color": "var(--border-primary)"
 				},
-				title: "切換主題"
+				title: "切換主題",
+				"aria-label": "切換主題"
 			}, [unref(themeStore).isDark ? (openBlock(), createElementBlock("svg", _hoisted_4, [..._cache[15] || (_cache[15] = [createBaseVNode("path", {
 				"stroke-linecap": "round",
 				"stroke-linejoin": "round",
@@ -889,6 +963,8 @@ var _sfc_main = {
 				onClick: _cache[1] || (_cache[1] = ($event) => _ctx.$emit("close")),
 				class: "p-2 rounded-lg transition-colors",
 				style: { "color": "var(--text-tertiary)" },
+				title: "關閉管理面板",
+				"aria-label": "關閉管理面板",
 				onMouseenter: _cache[2] || (_cache[2] = ($event) => $event.target.style.backgroundColor = "var(--bg-tertiary)"),
 				onMouseleave: _cache[3] || (_cache[3] = ($event) => $event.target.style.backgroundColor = "transparent")
 			}, [..._cache[17] || (_cache[17] = [createBaseVNode("svg", {
@@ -953,335 +1029,376 @@ var _sfc_main = {
 					}, " 清除所有指令 ", 8, _hoisted_12),
 					purgeMessage.value ? (openBlock(), createElementBlock("div", _hoisted_13, toDisplayString(purgeMessage.value), 1)) : createCommentVNode("", true)
 				])
-			]), createBaseVNode("div", _hoisted_14, [createBaseVNode("div", _hoisted_15, [
-				createBaseVNode("button", {
-					onClick: _cache[4] || (_cache[4] = ($event) => activeTab.value = "audit"),
-					class: "px-6 py-3 text-sm font-medium border-b-2 transition-colors",
-					style: normalizeStyle(activeTab.value === "audit" ? {
-						borderColor: "var(--accent-primary)",
-						color: "var(--accent-primary)"
-					} : {
-						borderColor: "transparent",
-						color: "var(--text-tertiary)"
-					})
-				}, " 指令審計 ", 4),
-				createBaseVNode("button", {
-					onClick: _cache[5] || (_cache[5] = ($event) => activeTab.value = "history"),
-					class: "px-6 py-3 text-sm font-medium border-b-2 transition-colors",
-					style: normalizeStyle(activeTab.value === "history" ? {
-						borderColor: "var(--accent-primary)",
-						color: "var(--accent-primary)"
-					} : {
-						borderColor: "transparent",
-						color: "var(--text-tertiary)"
-					})
-				}, " 對話紀錄 ", 4),
-				createBaseVNode("button", {
-					onClick: _cache[6] || (_cache[6] = ($event) => activeTab.value = "models"),
-					class: "px-6 py-3 text-sm font-medium border-b-2 transition-colors ml-auto",
-					style: normalizeStyle(activeTab.value === "models" ? {
-						borderColor: "var(--accent-primary)",
-						color: "var(--accent-primary)"
-					} : {
-						borderColor: "transparent",
-						color: "var(--text-tertiary)"
-					})
-				}, " 模型設定 ", 4)
-			]), activeTab.value === "models" ? (openBlock(), createElementBlock("div", _hoisted_16, [
-				_cache[33] || (_cache[33] = createBaseVNode("div", { class: "flex items-baseline justify-between gap-4 mb-6" }, [createBaseVNode("h3", { class: "text-2xl font-bold" }, "AI 模型配置"), createBaseVNode("div", {
-					class: "text-xs",
-					style: { "color": "var(--text-tertiary)" }
-				}, "提示：修改會寫入 DB；重啟不會被 application.properties 覆蓋")], -1)),
-				createBaseVNode("div", _hoisted_17, [
-					createBaseVNode("div", _hoisted_18, [_cache[20] || (_cache[20] = createBaseVNode("div", { class: "font-semibold text-sm" }, "新增模型", -1)), createBaseVNode("button", {
-						onClick: addModel,
-						disabled: isModelSaving.value,
-						class: "px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed",
-						style: { "background-color": "var(--accent-primary)" }
-					}, " 新增 ", 8, _hoisted_19)]),
-					createBaseVNode("div", _hoisted_20, [
-						createBaseVNode("label", _hoisted_21, [_cache[21] || (_cache[21] = createTextVNode(" id ", -1)), withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => newModel.value.id = $event),
-							class: "admin-input mt-1",
-							placeholder: "e.g. 70b"
-						}, null, 512), [[vModelText, newModel.value.id]])]),
-						createBaseVNode("label", _hoisted_22, [_cache[22] || (_cache[22] = createTextVNode(" label ", -1)), withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => newModel.value.label = $event),
-							class: "admin-input mt-1",
-							placeholder: "顯示名稱"
-						}, null, 512), [[vModelText, newModel.value.label]])]),
-						createBaseVNode("label", _hoisted_23, [_cache[23] || (_cache[23] = createTextVNode(" name (provider model name) ", -1)), withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => newModel.value.name = $event),
-							class: "admin-input mt-1 font-mono",
-							placeholder: "e.g. llama-3.3-70b-versatile"
-						}, null, 512), [[vModelText, newModel.value.name]])]),
-						createBaseVNode("label", _hoisted_24, [_cache[24] || (_cache[24] = createTextVNode(" tpm ", -1)), withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => newModel.value.tpm = $event),
-							type: "number",
-							min: "0",
-							class: "admin-input mt-1 font-mono"
-						}, null, 512), [[
-							vModelText,
-							newModel.value.tpm,
-							void 0,
-							{ number: true }
-						]])]),
-						createBaseVNode("label", _hoisted_25, [_cache[25] || (_cache[25] = createTextVNode(" category ", -1)), withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => newModel.value.category = $event),
-							class: "admin-input mt-1",
-							placeholder: "Other"
-						}, null, 512), [[vModelText, newModel.value.category]])]),
-						createBaseVNode("label", _hoisted_26, [withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => newModel.value.enabled = $event),
-							type: "checkbox",
-							class: "accent-[var(--accent-primary)]"
-						}, null, 512), [[vModelCheckbox, newModel.value.enabled]]), _cache[26] || (_cache[26] = createTextVNode(" enabled ", -1))])
-					]),
-					modelMessage.value ? (openBlock(), createElementBlock("div", _hoisted_27, toDisplayString(modelMessage.value), 1)) : createCommentVNode("", true)
+			]), createBaseVNode("div", _hoisted_14, [
+				createBaseVNode("div", _hoisted_15, [
+					createBaseVNode("button", {
+						onClick: _cache[4] || (_cache[4] = ($event) => activeTab.value = "audit"),
+						class: "px-6 py-3 text-sm font-medium border-b-2 transition-colors",
+						style: normalizeStyle(activeTab.value === "audit" ? {
+							borderColor: "var(--accent-primary)",
+							color: "var(--accent-primary)"
+						} : {
+							borderColor: "transparent",
+							color: "var(--text-tertiary)"
+						})
+					}, " 指令審計 ", 4),
+					createBaseVNode("button", {
+						onClick: _cache[5] || (_cache[5] = ($event) => activeTab.value = "history"),
+						class: "px-6 py-3 text-sm font-medium border-b-2 transition-colors",
+						style: normalizeStyle(activeTab.value === "history" ? {
+							borderColor: "var(--accent-primary)",
+							color: "var(--accent-primary)"
+						} : {
+							borderColor: "transparent",
+							color: "var(--text-tertiary)"
+						})
+					}, " 對話紀錄 ", 4),
+					createBaseVNode("button", {
+						onClick: _cache[6] || (_cache[6] = ($event) => activeTab.value = "models"),
+						class: "px-6 py-3 text-sm font-medium border-b-2 transition-colors ml-auto",
+						style: normalizeStyle(activeTab.value === "models" ? {
+							borderColor: "var(--accent-primary)",
+							color: "var(--accent-primary)"
+						} : {
+							borderColor: "transparent",
+							color: "var(--text-tertiary)"
+						})
+					}, " 模型設定 ", 4)
 				]),
-				createBaseVNode("div", _hoisted_28, [(openBlock(true), createElementBlock(Fragment, null, renderList(models.value, (m) => {
-					return openBlock(), createElementBlock("div", {
-						key: m.id,
-						class: "p-5 rounded-xl border",
-						style: {
-							"background-color": "var(--bg-secondary)",
-							"border-color": "var(--border-primary)"
-						}
-					}, [createBaseVNode("div", _hoisted_29, [createBaseVNode("div", _hoisted_30, [_cache[27] || (_cache[27] = createBaseVNode("div", {
-						class: "text-[10px]",
+				adminError.value ? (openBlock(), createElementBlock("div", _hoisted_16, [createBaseVNode("div", _hoisted_17, [createBaseVNode("p", _hoisted_18, toDisplayString(adminError.value), 1), createBaseVNode("button", {
+					type: "button",
+					class: "admin-inline-alert-close",
+					onClick: clearAdminError
+				}, " 關閉 ")])])) : createCommentVNode("", true),
+				activeTab.value === "models" ? (openBlock(), createElementBlock("div", _hoisted_19, [
+					_cache[33] || (_cache[33] = createBaseVNode("div", { class: "flex items-baseline justify-between gap-4 mb-6" }, [createBaseVNode("h3", { class: "text-2xl font-bold" }, "AI 模型配置"), createBaseVNode("div", {
+						class: "text-xs",
 						style: { "color": "var(--text-tertiary)" }
-					}, "id", -1)), createBaseVNode("div", _hoisted_31, toDisplayString(m.id), 1)]), createBaseVNode("div", _hoisted_32, [
-						createBaseVNode("label", _hoisted_33, [withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": ($event) => m.enabled = $event,
-							type: "checkbox",
-							class: "accent-[var(--accent-primary)]"
-						}, null, 8, _hoisted_34), [[vModelCheckbox, m.enabled]]), _cache[28] || (_cache[28] = createTextVNode(" enabled ", -1))]),
-						createBaseVNode("button", {
-							onClick: ($event) => saveModel(m),
+					}, "提示：修改會寫入 DB；重啟不會被 application.properties 覆蓋")], -1)),
+					createBaseVNode("div", _hoisted_20, [
+						createBaseVNode("div", _hoisted_21, [_cache[20] || (_cache[20] = createBaseVNode("div", { class: "font-semibold text-sm" }, "新增模型", -1)), createBaseVNode("button", {
+							onClick: addModel,
 							disabled: isModelSaving.value,
 							class: "px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed",
 							style: { "background-color": "var(--accent-primary)" }
-						}, " 儲存 ", 8, _hoisted_35),
+						}, " 新增 ", 8, _hoisted_22)]),
+						createBaseVNode("div", _hoisted_23, [
+							createBaseVNode("label", _hoisted_24, [_cache[21] || (_cache[21] = createTextVNode(" id ", -1)), withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => newModel.value.id = $event),
+								class: "admin-input mt-1",
+								placeholder: "e.g. 70b"
+							}, null, 512), [[vModelText, newModel.value.id]])]),
+							createBaseVNode("label", _hoisted_25, [_cache[22] || (_cache[22] = createTextVNode(" label ", -1)), withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => newModel.value.label = $event),
+								class: "admin-input mt-1",
+								placeholder: "顯示名稱"
+							}, null, 512), [[vModelText, newModel.value.label]])]),
+							createBaseVNode("label", _hoisted_26, [_cache[23] || (_cache[23] = createTextVNode(" name (provider model name) ", -1)), withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => newModel.value.name = $event),
+								class: "admin-input mt-1 font-mono",
+								placeholder: "e.g. llama-3.3-70b-versatile"
+							}, null, 512), [[vModelText, newModel.value.name]])]),
+							createBaseVNode("label", _hoisted_27, [_cache[24] || (_cache[24] = createTextVNode(" tpm ", -1)), withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => newModel.value.tpm = $event),
+								type: "number",
+								min: "0",
+								class: "admin-input mt-1 font-mono"
+							}, null, 512), [[
+								vModelText,
+								newModel.value.tpm,
+								void 0,
+								{ number: true }
+							]])]),
+							createBaseVNode("label", _hoisted_28, [_cache[25] || (_cache[25] = createTextVNode(" category ", -1)), withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => newModel.value.category = $event),
+								class: "admin-input mt-1",
+								placeholder: "Other"
+							}, null, 512), [[vModelText, newModel.value.category]])]),
+							createBaseVNode("label", _hoisted_29, [withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => newModel.value.enabled = $event),
+								type: "checkbox",
+								class: "accent-[var(--accent-primary)]"
+							}, null, 512), [[vModelCheckbox, newModel.value.enabled]]), _cache[26] || (_cache[26] = createTextVNode(" enabled ", -1))])
+						]),
+						modelMessage.value ? (openBlock(), createElementBlock("div", _hoisted_30, toDisplayString(modelMessage.value), 1)) : createCommentVNode("", true)
+					]),
+					createBaseVNode("div", _hoisted_31, [(openBlock(true), createElementBlock(Fragment, null, renderList(models.value, (m) => {
+						return openBlock(), createElementBlock("div", {
+							key: m.id,
+							class: "p-5 rounded-xl border",
+							style: {
+								"background-color": "var(--bg-secondary)",
+								"border-color": "var(--border-primary)"
+							}
+						}, [createBaseVNode("div", _hoisted_32, [createBaseVNode("div", _hoisted_33, [_cache[27] || (_cache[27] = createBaseVNode("div", {
+							class: "text-[10px]",
+							style: { "color": "var(--text-tertiary)" }
+						}, "id", -1)), createBaseVNode("div", _hoisted_34, toDisplayString(m.id), 1)]), createBaseVNode("div", _hoisted_35, [
+							createBaseVNode("label", _hoisted_36, [withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": ($event) => m.enabled = $event,
+								type: "checkbox",
+								class: "accent-[var(--accent-primary)]"
+							}, null, 8, _hoisted_37), [[vModelCheckbox, m.enabled]]), _cache[28] || (_cache[28] = createTextVNode(" enabled ", -1))]),
+							createBaseVNode("button", {
+								onClick: ($event) => saveModel(m),
+								disabled: isModelSaving.value,
+								class: "px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed",
+								style: { "background-color": "var(--accent-primary)" }
+							}, " 儲存 ", 8, _hoisted_38),
+							createBaseVNode("button", {
+								onClick: ($event) => deleteModel(m.id),
+								disabled: isModelSaving.value,
+								class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
+								style: {
+									"border-color": "color-mix(in srgb, var(--accent-danger) 30%, transparent)",
+									"color": "var(--accent-danger)"
+								}
+							}, " 刪除 ", 8, _hoisted_39)
+						])]), createBaseVNode("div", _hoisted_40, [
+							createBaseVNode("label", _hoisted_41, [_cache[29] || (_cache[29] = createTextVNode(" label ", -1)), withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": ($event) => m.label = $event,
+								class: "admin-input mt-1"
+							}, null, 8, _hoisted_42), [[vModelText, m.label]])]),
+							createBaseVNode("label", _hoisted_43, [_cache[30] || (_cache[30] = createTextVNode(" category ", -1)), withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": ($event) => m.category = $event,
+								class: "admin-input mt-1"
+							}, null, 8, _hoisted_44), [[vModelText, m.category]])]),
+							createBaseVNode("label", _hoisted_45, [_cache[31] || (_cache[31] = createTextVNode(" name ", -1)), withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": ($event) => m.name = $event,
+								class: "admin-input mt-1 font-mono"
+							}, null, 8, _hoisted_46), [[vModelText, m.name]])]),
+							createBaseVNode("label", _hoisted_47, [_cache[32] || (_cache[32] = createTextVNode(" tpm ", -1)), withDirectives(createBaseVNode("input", {
+								"onUpdate:modelValue": ($event) => m.tpm = $event,
+								type: "number",
+								min: "0",
+								class: "admin-input mt-1 font-mono"
+							}, null, 8, _hoisted_48), [[
+								vModelText,
+								m.tpm,
+								void 0,
+								{ number: true }
+							]])])
+						])]);
+					}), 128))])
+				])) : (openBlock(), createElementBlock("div", _hoisted_49, [
+					selectedUser.value ? (openBlock(), createElementBlock("div", _hoisted_50, [
+						_cache[34] || (_cache[34] = createBaseVNode("span", {
+							class: "text-xs",
+							style: { "color": "var(--text-tertiary)" }
+						}, "Selected:", -1)),
+						createBaseVNode("span", _hoisted_51, toDisplayString(selectedUser.value), 1),
+						createBaseVNode("span", _hoisted_52, " 最後更新：" + toDisplayString(lastUpdatedLabel.value) + "（每 30 秒自動更新） ", 1),
 						createBaseVNode("button", {
-							onClick: ($event) => deleteModel(m.id),
-							disabled: isModelSaving.value,
+							onClick: refreshCurrentView,
+							disabled: isPurging.value || isLoading.value || isManualRefreshing.value || isAutoRefreshing.value || isExporting.value,
+							class: "ml-auto px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
+							style: {
+								"background-color": "var(--bg-secondary)",
+								"border-color": "var(--border-primary)",
+								"color": "var(--text-secondary)"
+							}
+						}, toDisplayString(isManualRefreshing.value || isAutoRefreshing.value ? "更新中..." : "重新整理"), 9, _hoisted_53),
+						createBaseVNode("button", {
+							onClick: exportSelectedUserCsv,
+							disabled: isPurging.value || isLoading.value || isExporting.value || !isExportTab.value,
+							class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
+							style: {
+								"border-color": "color-mix(in srgb, var(--accent-primary) 35%, transparent)",
+								"color": "var(--accent-primary)"
+							}
+						}, toDisplayString(isExporting.value ? "匯出中..." : "匯出 CSV"), 9, _hoisted_54),
+						createBaseVNode("button", {
+							onClick: purgeSelectedUserChats,
+							disabled: isPurging.value || isExporting.value,
 							class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
 							style: {
 								"border-color": "color-mix(in srgb, var(--accent-danger) 30%, transparent)",
 								"color": "var(--accent-danger)"
 							}
-						}, " 刪除 ", 8, _hoisted_36)
-					])]), createBaseVNode("div", _hoisted_37, [
-						createBaseVNode("label", _hoisted_38, [_cache[29] || (_cache[29] = createTextVNode(" label ", -1)), withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": ($event) => m.label = $event,
-							class: "admin-input mt-1"
-						}, null, 8, _hoisted_39), [[vModelText, m.label]])]),
-						createBaseVNode("label", _hoisted_40, [_cache[30] || (_cache[30] = createTextVNode(" category ", -1)), withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": ($event) => m.category = $event,
-							class: "admin-input mt-1"
-						}, null, 8, _hoisted_41), [[vModelText, m.category]])]),
-						createBaseVNode("label", _hoisted_42, [_cache[31] || (_cache[31] = createTextVNode(" name ", -1)), withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": ($event) => m.name = $event,
-							class: "admin-input mt-1 font-mono"
-						}, null, 8, _hoisted_43), [[vModelText, m.name]])]),
-						createBaseVNode("label", _hoisted_44, [_cache[32] || (_cache[32] = createTextVNode(" tpm ", -1)), withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": ($event) => m.tpm = $event,
-							type: "number",
-							min: "0",
-							class: "admin-input mt-1 font-mono"
-						}, null, 8, _hoisted_45), [[
-							vModelText,
-							m.tpm,
-							void 0,
-							{ number: true }
-						]])])
-					])]);
-				}), 128))])
-			])) : (openBlock(), createElementBlock("div", _hoisted_46, [
-				selectedUser.value ? (openBlock(), createElementBlock("div", _hoisted_47, [
-					_cache[34] || (_cache[34] = createBaseVNode("span", {
-						class: "text-xs",
+						}, " 清除對話 ", 8, _hoisted_55),
+						createBaseVNode("button", {
+							onClick: purgeSelectedUserCommands,
+							disabled: isPurging.value || isExporting.value,
+							class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
+							style: {
+								"border-color": "color-mix(in srgb, var(--accent-danger) 30%, transparent)",
+								"color": "var(--accent-danger)"
+							}
+						}, " 清除指令 ", 8, _hoisted_56),
+						createBaseVNode("button", {
+							onClick: purgeSelectedUserActivity,
+							disabled: isPurging.value || isExporting.value,
+							class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
+							style: {
+								"border-color": "color-mix(in srgb, var(--accent-danger) 30%, transparent)",
+								"color": "var(--accent-danger)"
+							}
+						}, " 清除全部 ", 8, _hoisted_57)
+					])) : createCommentVNode("", true),
+					exportMessage.value ? (openBlock(), createElementBlock("div", _hoisted_58, toDisplayString(exportMessage.value), 1)) : createCommentVNode("", true),
+					!selectedUser.value ? (openBlock(), createElementBlock("div", _hoisted_59, [(openBlock(), createElementBlock("svg", _hoisted_60, [..._cache[35] || (_cache[35] = [createBaseVNode("path", {
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round",
+						"stroke-width": "1.5",
+						d: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+					}, null, -1)])])), _cache[36] || (_cache[36] = createBaseVNode("p", {
+						class: "text-sm",
 						style: { "color": "var(--text-tertiary)" }
-					}, "Selected:", -1)),
-					createBaseVNode("span", _hoisted_48, toDisplayString(selectedUser.value), 1),
-					createBaseVNode("span", _hoisted_49, " 最後更新：" + toDisplayString(lastUpdatedLabel.value) + "（每 30 秒自動更新） ", 1),
-					createBaseVNode("button", {
-						onClick: refreshCurrentView,
-						disabled: isPurging.value || isLoading.value || isManualRefreshing.value || isAutoRefreshing.value || isExporting.value,
-						class: "ml-auto px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
+					}, "← 請先從左側選擇一個用戶", -1))])) : isLoading.value ? (openBlock(), createElementBlock("div", _hoisted_61, [..._cache[37] || (_cache[37] = [createBaseVNode("div", {
+						class: "animate-spin rounded-full h-8 w-8 border-b-2",
+						style: { "border-color": "var(--accent-primary)" }
+					}, null, -1)])])) : activeTab.value === "audit" ? (openBlock(), createElementBlock("div", _hoisted_62, [auditLogs.value.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_63, "尚無指令執行紀錄")) : (openBlock(), createElementBlock("div", _hoisted_64, [createBaseVNode("div", _hoisted_65, [(openBlock(true), createElementBlock(Fragment, null, renderList(sortedAuditLogs.value, (log) => {
+						return openBlock(), createElementBlock("div", {
+							key: log.id,
+							class: "rounded-xl border p-3 space-y-2",
+							style: {
+								"background-color": "var(--bg-secondary)",
+								"border-color": "var(--border-primary)"
+							}
+						}, [
+							createBaseVNode("div", _hoisted_66, [
+								createBaseVNode("span", _hoisted_67, toDisplayString(formatDate(log.executionTime)), 1),
+								createBaseVNode("span", {
+									class: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
+									style: normalizeStyle(log.success ? {
+										backgroundColor: "color-mix(in srgb, var(--accent-success) 15%, transparent)",
+										color: "var(--accent-success)"
+									} : {
+										backgroundColor: "color-mix(in srgb, var(--accent-danger) 15%, transparent)",
+										color: "var(--accent-danger)"
+									})
+								}, toDisplayString(log.success ? "SUCCESS" : "FAILED"), 5),
+								!log.success && log.exitCode !== null && log.exitCode !== void 0 ? (openBlock(), createElementBlock("span", _hoisted_68, " exit: " + toDisplayString(log.exitCode), 1)) : createCommentVNode("", true),
+								log.commandType === "MODIFY" ? (openBlock(), createElementBlock("span", _hoisted_69, " MODIFY ")) : (openBlock(), createElementBlock("span", _hoisted_70, " READ "))
+							]),
+							createBaseVNode("div", _hoisted_71, [createBaseVNode("code", _hoisted_72, toDisplayString(log.command), 1)]),
+							createBaseVNode("details", _hoisted_73, [_cache[38] || (_cache[38] = createBaseVNode("summary", {
+								class: "cursor-pointer text-xs select-none flex items-center gap-1",
+								style: { "color": "var(--text-tertiary)" }
+							}, [createBaseVNode("span", { class: "group-open:hidden" }, "▶ 顯示輸出"), createBaseVNode("span", { class: "hidden group-open:inline" }, "▼ 隱藏輸出")], -1)), createBaseVNode("div", _hoisted_74, [createBaseVNode("pre", _hoisted_75, toDisplayString(hideResolvedCmdMarker(log.output)), 1)])])
+						]);
+					}), 128))]), createBaseVNode("div", _hoisted_76, [createBaseVNode("table", _hoisted_77, [_cache[40] || (_cache[40] = createBaseVNode("thead", null, [createBaseVNode("tr", { style: { "background-color": "var(--bg-tertiary)" } }, [
+						createBaseVNode("th", {
+							class: "py-3 px-4 border-b text-xs uppercase font-semibold",
+							style: {
+								"border-color": "var(--border-primary)",
+								"color": "var(--text-tertiary)"
+							}
+						}, "時間"),
+						createBaseVNode("th", {
+							class: "py-3 px-4 border-b text-xs uppercase font-semibold",
+							style: {
+								"border-color": "var(--border-primary)",
+								"color": "var(--text-tertiary)"
+							}
+						}, "狀態"),
+						createBaseVNode("th", {
+							class: "py-3 px-4 border-b text-xs uppercase font-semibold",
+							style: {
+								"border-color": "var(--border-primary)",
+								"color": "var(--text-tertiary)"
+							}
+						}, "類型"),
+						createBaseVNode("th", {
+							class: "py-3 px-4 border-b text-xs uppercase font-semibold",
+							style: {
+								"border-color": "var(--border-primary)",
+								"color": "var(--text-tertiary)"
+							}
+						}, "指令"),
+						createBaseVNode("th", {
+							class: "py-3 px-4 border-b text-xs uppercase font-semibold",
+							style: {
+								"border-color": "var(--border-primary)",
+								"color": "var(--text-tertiary)"
+							}
+						}, "輸出結果")
+					])], -1)), createBaseVNode("tbody", null, [(openBlock(true), createElementBlock(Fragment, null, renderList(sortedAuditLogs.value, (log) => {
+						return openBlock(), createElementBlock("tr", {
+							key: log.id,
+							class: "transition-colors border-b",
+							style: { "border-color": "var(--border-primary)" },
+							onMouseenter: _cache[13] || (_cache[13] = ($event) => $event.currentTarget.style.backgroundColor = "var(--bg-tertiary)"),
+							onMouseleave: _cache[14] || (_cache[14] = ($event) => $event.currentTarget.style.backgroundColor = "transparent")
+						}, [
+							createBaseVNode("td", _hoisted_78, toDisplayString(formatDate(log.executionTime)), 1),
+							createBaseVNode("td", _hoisted_79, [createBaseVNode("span", {
+								class: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
+								style: normalizeStyle(log.success ? {
+									backgroundColor: "color-mix(in srgb, var(--accent-success) 15%, transparent)",
+									color: "var(--accent-success)"
+								} : {
+									backgroundColor: "color-mix(in srgb, var(--accent-danger) 15%, transparent)",
+									color: "var(--accent-danger)"
+								})
+							}, toDisplayString(log.success ? "SUCCESS" : "FAILED"), 5), !log.success && log.exitCode !== null && log.exitCode !== void 0 ? (openBlock(), createElementBlock("div", _hoisted_80, " exit: " + toDisplayString(log.exitCode), 1)) : createCommentVNode("", true)]),
+							createBaseVNode("td", _hoisted_81, [log.commandType === "MODIFY" ? (openBlock(), createElementBlock("span", _hoisted_82, " MODIFY ")) : (openBlock(), createElementBlock("span", _hoisted_83, " READ "))]),
+							createBaseVNode("td", _hoisted_84, [createBaseVNode("code", _hoisted_85, toDisplayString(log.command), 1)]),
+							createBaseVNode("td", _hoisted_86, [createBaseVNode("details", _hoisted_87, [_cache[39] || (_cache[39] = createBaseVNode("summary", {
+								class: "cursor-pointer text-xs select-none flex items-center gap-1",
+								style: { "color": "var(--text-tertiary)" }
+							}, [createBaseVNode("span", { class: "group-open:hidden" }, "▶ 顯示輸出"), createBaseVNode("span", { class: "hidden group-open:inline" }, "▼ 隱藏輸出")], -1)), createBaseVNode("div", _hoisted_88, [createBaseVNode("pre", _hoisted_89, toDisplayString(hideResolvedCmdMarker(log.output)), 1)])])])
+						], 32);
+					}), 128))])])])])), auditPage.value.totalElements > 0 ? (openBlock(), createElementBlock("div", _hoisted_90, [createBaseVNode("span", _hoisted_91, " 第 " + toDisplayString(auditPage.value.page + 1) + " / " + toDisplayString(Math.max(auditPage.value.totalPages, 1)) + " 頁，共 " + toDisplayString(auditPage.value.totalElements) + " 筆 ", 1), createBaseVNode("div", _hoisted_92, [createBaseVNode("button", {
+						onClick: prevAuditPage,
+						disabled: isLoading.value || isAutoRefreshing.value || auditPage.value.page <= 0,
+						class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
 						style: {
 							"background-color": "var(--bg-secondary)",
 							"border-color": "var(--border-primary)",
 							"color": "var(--text-secondary)"
 						}
-					}, toDisplayString(isManualRefreshing.value || isAutoRefreshing.value ? "更新中..." : "重新整理"), 9, _hoisted_50),
-					createBaseVNode("button", {
-						onClick: exportSelectedUserCsv,
-						disabled: isPurging.value || isLoading.value || isExporting.value || !isExportTab.value,
+					}, " 上一頁 ", 8, _hoisted_93), createBaseVNode("button", {
+						onClick: nextAuditPage,
+						disabled: isLoading.value || isAutoRefreshing.value || !auditPage.value.hasNext,
 						class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
 						style: {
-							"border-color": "color-mix(in srgb, var(--accent-primary) 35%, transparent)",
-							"color": "var(--accent-primary)"
-						}
-					}, toDisplayString(isExporting.value ? "匯出中..." : "匯出 CSV"), 9, _hoisted_51),
-					createBaseVNode("button", {
-						onClick: purgeSelectedUserChats,
-						disabled: isPurging.value || isExporting.value,
-						class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
-						style: {
-							"border-color": "color-mix(in srgb, var(--accent-danger) 30%, transparent)",
-							"color": "var(--accent-danger)"
-						}
-					}, " 清除對話 ", 8, _hoisted_52),
-					createBaseVNode("button", {
-						onClick: purgeSelectedUserCommands,
-						disabled: isPurging.value || isExporting.value,
-						class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
-						style: {
-							"border-color": "color-mix(in srgb, var(--accent-danger) 30%, transparent)",
-							"color": "var(--accent-danger)"
-						}
-					}, " 清除指令 ", 8, _hoisted_53),
-					createBaseVNode("button", {
-						onClick: purgeSelectedUserActivity,
-						disabled: isPurging.value || isExporting.value,
-						class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
-						style: {
-							"border-color": "color-mix(in srgb, var(--accent-danger) 30%, transparent)",
-							"color": "var(--accent-danger)"
-						}
-					}, " 清除全部 ", 8, _hoisted_54)
-				])) : createCommentVNode("", true),
-				exportMessage.value ? (openBlock(), createElementBlock("div", _hoisted_55, toDisplayString(exportMessage.value), 1)) : createCommentVNode("", true),
-				!selectedUser.value ? (openBlock(), createElementBlock("div", _hoisted_56, [(openBlock(), createElementBlock("svg", _hoisted_57, [..._cache[35] || (_cache[35] = [createBaseVNode("path", {
-					"stroke-linecap": "round",
-					"stroke-linejoin": "round",
-					"stroke-width": "1.5",
-					d: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-				}, null, -1)])])), _cache[36] || (_cache[36] = createBaseVNode("p", { style: { "color": "var(--text-tertiary)" } }, "請從左側選擇一位使用者", -1))])) : isLoading.value ? (openBlock(), createElementBlock("div", _hoisted_58, [..._cache[37] || (_cache[37] = [createBaseVNode("div", {
-					class: "animate-spin rounded-full h-8 w-8 border-b-2",
-					style: { "border-color": "var(--accent-primary)" }
-				}, null, -1)])])) : activeTab.value === "audit" ? (openBlock(), createElementBlock("div", _hoisted_59, [auditLogs.value.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_60, "尚無指令執行紀錄")) : (openBlock(), createElementBlock("div", _hoisted_61, [createBaseVNode("table", _hoisted_62, [_cache[39] || (_cache[39] = createBaseVNode("thead", null, [createBaseVNode("tr", { style: { "background-color": "var(--bg-tertiary)" } }, [
-					createBaseVNode("th", {
-						class: "py-3 px-4 border-b text-xs uppercase font-semibold",
-						style: {
+							"background-color": "var(--bg-secondary)",
 							"border-color": "var(--border-primary)",
-							"color": "var(--text-tertiary)"
+							"color": "var(--text-secondary)"
 						}
-					}, "時間"),
-					createBaseVNode("th", {
-						class: "py-3 px-4 border-b text-xs uppercase font-semibold",
-						style: {
-							"border-color": "var(--border-primary)",
-							"color": "var(--text-tertiary)"
-						}
-					}, "狀態"),
-					createBaseVNode("th", {
-						class: "py-3 px-4 border-b text-xs uppercase font-semibold",
-						style: {
-							"border-color": "var(--border-primary)",
-							"color": "var(--text-tertiary)"
-						}
-					}, "類型"),
-					createBaseVNode("th", {
-						class: "py-3 px-4 border-b text-xs uppercase font-semibold",
-						style: {
-							"border-color": "var(--border-primary)",
-							"color": "var(--text-tertiary)"
-						}
-					}, "指令"),
-					createBaseVNode("th", {
-						class: "py-3 px-4 border-b text-xs uppercase font-semibold",
-						style: {
-							"border-color": "var(--border-primary)",
-							"color": "var(--text-tertiary)"
-						}
-					}, "輸出結果")
-				])], -1)), createBaseVNode("tbody", null, [(openBlock(true), createElementBlock(Fragment, null, renderList(sortedAuditLogs.value, (log) => {
-					return openBlock(), createElementBlock("tr", {
-						key: log.id,
-						class: "transition-colors border-b",
-						style: { "border-color": "var(--border-primary)" },
-						onMouseenter: _cache[13] || (_cache[13] = ($event) => $event.currentTarget.style.backgroundColor = "var(--bg-tertiary)"),
-						onMouseleave: _cache[14] || (_cache[14] = ($event) => $event.currentTarget.style.backgroundColor = "transparent")
-					}, [
-						createBaseVNode("td", _hoisted_63, toDisplayString(formatDate(log.executionTime)), 1),
-						createBaseVNode("td", _hoisted_64, [createBaseVNode("span", {
-							class: "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
-							style: normalizeStyle(log.success ? {
-								backgroundColor: "color-mix(in srgb, var(--accent-success) 15%, transparent)",
-								color: "var(--accent-success)"
-							} : {
-								backgroundColor: "color-mix(in srgb, var(--accent-danger) 15%, transparent)",
-								color: "var(--accent-danger)"
-							})
-						}, toDisplayString(log.success ? "SUCCESS" : "FAILED"), 5), !log.success && log.exitCode !== null && log.exitCode !== void 0 ? (openBlock(), createElementBlock("div", _hoisted_65, " exit: " + toDisplayString(log.exitCode), 1)) : createCommentVNode("", true)]),
-						createBaseVNode("td", _hoisted_66, [log.commandType === "MODIFY" ? (openBlock(), createElementBlock("span", _hoisted_67, " MODIFY ")) : (openBlock(), createElementBlock("span", _hoisted_68, " READ "))]),
-						createBaseVNode("td", _hoisted_69, [createBaseVNode("code", _hoisted_70, toDisplayString(log.command), 1)]),
-						createBaseVNode("td", _hoisted_71, [createBaseVNode("details", _hoisted_72, [_cache[38] || (_cache[38] = createBaseVNode("summary", {
-							class: "cursor-pointer text-xs select-none flex items-center gap-1",
-							style: { "color": "var(--text-tertiary)" }
-						}, [createBaseVNode("span", { class: "group-open:hidden" }, "▶ 顯示輸出"), createBaseVNode("span", { class: "hidden group-open:inline" }, "▼ 隱藏輸出")], -1)), createBaseVNode("div", _hoisted_73, [createBaseVNode("pre", _hoisted_74, toDisplayString(hideResolvedCmdMarker(log.output)), 1)])])])
-					], 32);
-				}), 128))])])])), auditPage.value.totalElements > 0 ? (openBlock(), createElementBlock("div", _hoisted_75, [createBaseVNode("span", _hoisted_76, " 第 " + toDisplayString(auditPage.value.page + 1) + " / " + toDisplayString(Math.max(auditPage.value.totalPages, 1)) + " 頁，共 " + toDisplayString(auditPage.value.totalElements) + " 筆 ", 1), createBaseVNode("div", _hoisted_77, [createBaseVNode("button", {
-					onClick: prevAuditPage,
-					disabled: isLoading.value || isAutoRefreshing.value || auditPage.value.page <= 0,
-					class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
-					style: {
-						"background-color": "var(--bg-secondary)",
-						"border-color": "var(--border-primary)",
-						"color": "var(--text-secondary)"
-					}
-				}, " 上一頁 ", 8, _hoisted_78), createBaseVNode("button", {
-					onClick: nextAuditPage,
-					disabled: isLoading.value || isAutoRefreshing.value || !auditPage.value.hasNext,
-					class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
-					style: {
-						"background-color": "var(--bg-secondary)",
-						"border-color": "var(--border-primary)",
-						"color": "var(--text-secondary)"
-					}
-				}, " 下一頁 ", 8, _hoisted_79)])])) : createCommentVNode("", true)])) : activeTab.value === "history" ? (openBlock(), createElementBlock("div", _hoisted_80, [
-					chatHistory.value.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_81, "尚無對話紀錄")) : createCommentVNode("", true),
-					(openBlock(true), createElementBlock(Fragment, null, renderList(chatHistory.value, (msg, idx) => {
-						return openBlock(), createElementBlock("div", {
-							key: idx,
-							class: "flex gap-3"
-						}, [createBaseVNode("div", { class: normalizeClass(["flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold", msg.role === "user" ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white" : "bg-gradient-to-br from-emerald-500 to-teal-600 text-white"]) }, toDisplayString(msg.role === "user" ? "U" : "AI"), 3), createBaseVNode("div", _hoisted_82, [createBaseVNode("div", _hoisted_83, [createBaseVNode("span", _hoisted_84, toDisplayString(msg.role === "user" ? "User" : "Assistant"), 1), createBaseVNode("span", _hoisted_85, toDisplayString(formatDate(msg.timestamp)), 1)]), createBaseVNode("div", {
-							class: "markdown-content rounded-xl p-4 border text-sm leading-relaxed shadow-sm",
+					}, " 下一頁 ", 8, _hoisted_94)])])) : createCommentVNode("", true)])) : activeTab.value === "history" ? (openBlock(), createElementBlock("div", _hoisted_95, [
+						chatHistory.value.length === 0 ? (openBlock(), createElementBlock("div", _hoisted_96, "尚無對話紀錄")) : createCommentVNode("", true),
+						(openBlock(true), createElementBlock(Fragment, null, renderList(chatHistory.value, (msg, idx) => {
+							return openBlock(), createElementBlock("div", {
+								key: idx,
+								class: "flex gap-3"
+							}, [createBaseVNode("div", { class: normalizeClass(["flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold", msg.role === "user" ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white" : "bg-gradient-to-br from-emerald-500 to-teal-600 text-white"]) }, toDisplayString(msg.role === "user" ? "U" : "AI"), 3), createBaseVNode("div", _hoisted_97, [createBaseVNode("div", _hoisted_98, [createBaseVNode("span", _hoisted_99, toDisplayString(msg.role === "user" ? "User" : "Assistant"), 1), createBaseVNode("span", _hoisted_100, toDisplayString(formatDate(msg.timestamp)), 1)]), createBaseVNode("div", {
+								class: "markdown-content rounded-xl p-4 border text-sm leading-relaxed shadow-sm",
+								style: {
+									"background-color": "var(--bg-secondary)",
+									"border-color": "var(--border-primary)",
+									"color": "var(--text-secondary)"
+								},
+								innerHTML: renderMarkdown(msg.content)
+							}, null, 8, _hoisted_101)])]);
+						}), 128)),
+						historyPage.value.totalElements > 0 ? (openBlock(), createElementBlock("div", _hoisted_102, [createBaseVNode("span", _hoisted_103, " 第 " + toDisplayString(historyPage.value.page + 1) + " / " + toDisplayString(Math.max(historyPage.value.totalPages, 1)) + " 頁，共 " + toDisplayString(historyPage.value.totalElements) + " 筆 ", 1), createBaseVNode("div", _hoisted_104, [createBaseVNode("button", {
+							onClick: prevHistoryPage,
+							disabled: isLoading.value || isAutoRefreshing.value || historyPage.value.page <= 0,
+							class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
 							style: {
 								"background-color": "var(--bg-secondary)",
 								"border-color": "var(--border-primary)",
 								"color": "var(--text-secondary)"
-							},
-							innerHTML: renderMarkdown(msg.content)
-						}, null, 8, _hoisted_86)])]);
-					}), 128)),
-					historyPage.value.totalElements > 0 ? (openBlock(), createElementBlock("div", _hoisted_87, [createBaseVNode("span", _hoisted_88, " 第 " + toDisplayString(historyPage.value.page + 1) + " / " + toDisplayString(Math.max(historyPage.value.totalPages, 1)) + " 頁，共 " + toDisplayString(historyPage.value.totalElements) + " 筆 ", 1), createBaseVNode("div", _hoisted_89, [createBaseVNode("button", {
-						onClick: prevHistoryPage,
-						disabled: isLoading.value || isAutoRefreshing.value || historyPage.value.page <= 0,
-						class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
-						style: {
-							"background-color": "var(--bg-secondary)",
-							"border-color": "var(--border-primary)",
-							"color": "var(--text-secondary)"
-						}
-					}, " 上一頁 ", 8, _hoisted_90), createBaseVNode("button", {
-						onClick: nextHistoryPage,
-						disabled: isLoading.value || isAutoRefreshing.value || !historyPage.value.hasNext,
-						class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
-						style: {
-							"background-color": "var(--bg-secondary)",
-							"border-color": "var(--border-primary)",
-							"color": "var(--text-secondary)"
-						}
-					}, " 下一頁 ", 8, _hoisted_91)])])) : createCommentVNode("", true)
-				])) : createCommentVNode("", true)
-			]))])])]);
+							}
+						}, " 上一頁 ", 8, _hoisted_105), createBaseVNode("button", {
+							onClick: nextHistoryPage,
+							disabled: isLoading.value || isAutoRefreshing.value || !historyPage.value.hasNext,
+							class: "px-3 py-1.5 rounded-lg text-xs border disabled:opacity-50 disabled:cursor-not-allowed",
+							style: {
+								"background-color": "var(--bg-secondary)",
+								"border-color": "var(--border-primary)",
+								"color": "var(--text-secondary)"
+							}
+						}, " 下一頁 ", 8, _hoisted_106)])])) : createCommentVNode("", true)
+					])) : createCommentVNode("", true)
+				]))
+			])])]);
 		};
 	}
 };
-var AdminDashboard_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main, [["__scopeId", "data-v-302773b4"]]);
+var AdminDashboard_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main, [["__scopeId", "data-v-4a7b4427"]]);
 
 //#endregion
 export { AdminDashboard_default as default };

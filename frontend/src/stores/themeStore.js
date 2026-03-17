@@ -9,8 +9,8 @@ export const useThemeStore = defineStore('theme', () => {
     const saved = localStorage.getItem('theme')
     if (saved === 'light' || saved === 'dark') {
       theme.value = saved
-    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      theme.value = 'light'
+    } else {
+      theme.value = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     }
     applyTheme()
   }

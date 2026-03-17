@@ -3,8 +3,9 @@ import { computed, nextTick, ref, watch, onUnmounted } from 'vue';
 import { COMMAND_CONFIRM_TIMEOUT_SECONDS } from '../config/app.config';
 
 const DEFAULT_TTL_SECONDS = COMMAND_CONFIRM_TIMEOUT_SECONDS;
-const COUNTDOWN_WARN_THRESHOLD_SECONDS = 60;
-const COUNTDOWN_DANGER_THRESHOLD_SECONDS = 30;
+const COUNTDOWN_WARN_THRESHOLD_SECONDS = 5 * 60;
+const COUNTDOWN_DANGER_THRESHOLD_SECONDS = 2 * 60;
+const RESOLVE_FEEDBACK_VISIBLE_MS = 1800;
 const EXPIRES_AT_FORMATTER = new Intl.DateTimeFormat('zh-TW', {
   month: '2-digit',
   day: '2-digit',
@@ -24,18 +25,20 @@ const props = defineProps({
   ttlSeconds: { type: Number, default: COMMAND_CONFIRM_TIMEOUT_SECONDS },
 })
 
-const emit = defineEmits(['confirm', 'cancel'])
+const emit = defineEmits(['confirm', 'cancel', 'resend-command'])
 
 const isPending = computed(() => props.status === 'pending');
+const isExecuting = computed(() => props.status === 'executing');
 const isConfirmed = computed(() => props.status === 'confirmed');
+const isFailed = computed(() => props.status === 'failed');
 const isCancelled = computed(() => props.status === 'cancelled');
-const isExpired = computed(() => isPending.value && remainingSeconds.value <= 0);
-const isResolved = computed(() => isConfirmed.value || isCancelled.value || isExpired.value);
+const isExpired = computed(() => props.status === 'expired' || (isPending.value && remainingSeconds.value <= 0));
+const isResolved = computed(() => isConfirmed.value || isFailed.value || isCancelled.value || isExpired.value);
 
-const isAlreadyResolved = props.status === 'confirmed' || props.status === 'cancelled' || isInitiallyExpired(props);
+const isAlreadyResolved = props.status === 'confirmed' || props.status === 'failed' || props.status === 'cancelled';
 const collapsed = ref(isAlreadyResolved);
 const summaryRef = ref(null);
-const resolvedAt = ref(null);
+const resolvedAtLabel = ref(null);
 const resolvedAtIsCreatedFallback = ref(false);
 const copied = ref(false);
 const copyFailed = ref(false);
@@ -82,11 +85,14 @@ function stopCountdown() {
   countdownInterval = null;
 }
 
+function clearCollapseTimer() {
+  if (!collapseTimer) return;
+  clearTimeout(collapseTimer);
+  collapseTimer = null;
+}
+
 function scheduleCollapse(delayMs = 0) {
-  if (collapseTimer) {
-    clearTimeout(collapseTimer);
-    collapseTimer = null;
-  }
+  clearCollapseTimer();
   collapseTimer = setTimeout(() => {
     collapsed.value = true;
     collapseTimer = null;
@@ -116,10 +122,7 @@ function startCountdown() {
 
 onUnmounted(() => {
   stopCountdown();
-  if (collapseTimer) {
-    clearTimeout(collapseTimer);
-    collapseTimer = null;
-  }
+  clearCollapseTimer();
 });
 
 watch(
@@ -151,26 +154,42 @@ watch(
     if (newStatus !== 'pending') {
       stopCountdown();
     }
-    if (newStatus === 'confirmed' || newStatus === 'cancelled') {
+    if (newStatus === 'confirmed' || newStatus === 'cancelled' || newStatus === 'failed') {
       if (Number.isFinite(newResolvedAt)) {
-        resolvedAt.value = RESOLVED_AT_FORMATTER.format(new Date(newResolvedAt));
+        resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(new Date(newResolvedAt));
         resolvedAtIsCreatedFallback.value = false;
       } else if (Number.isFinite(newCreatedAt)) {
-        resolvedAt.value = RESOLVED_AT_FORMATTER.format(new Date(newCreatedAt));
+        resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(new Date(newCreatedAt));
         resolvedAtIsCreatedFallback.value = true;
-      } else if (!resolvedAt.value) {
-        resolvedAt.value = RESOLVED_AT_FORMATTER.format(new Date());
+      } else if (!resolvedAtLabel.value) {
+        resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(new Date());
         resolvedAtIsCreatedFallback.value = false;
       }
 
-      // Collapse after a short delay so the user sees the status change
-      if (oldStatus === 'pending') {
-        scheduleCollapse(1800);
+      // Keep status visible briefly before collapsing.
+      if (oldStatus === 'pending' || oldStatus === 'executing') {
+        scheduleCollapse(RESOLVE_FEEDBACK_VISIBLE_MS);
       }
       return;
     }
+    if (newStatus === 'expired') {
+      resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(
+        new Date(hasDeadline.value ? deadlineMs.value : Date.now())
+      );
+      resolvedAtIsCreatedFallback.value = false;
+      clearCollapseTimer();
+      collapsed.value = false;
+      return;
+    }
+    if (newStatus === 'executing') {
+      clearCollapseTimer();
+      collapsed.value = false;
+      return;
+    }
     if (newStatus === 'pending' && !isExpired.value) {
-      resolvedAt.value = null;
+      resolvedAtLabel.value = null;
+      clearCollapseTimer();
+      collapsed.value = false;
     }
     resolvedAtIsCreatedFallback.value = false;
   },
@@ -179,26 +198,37 @@ watch(
 
 watch(isExpired, (expired) => {
   if (!expired) return;
-  resolvedAt.value = RESOLVED_AT_FORMATTER.format(
+  resolvedAtLabel.value = RESOLVED_AT_FORMATTER.format(
     new Date(hasDeadline.value ? deadlineMs.value : Date.now())
   );
   resolvedAtIsCreatedFallback.value = false;
-  scheduleCollapse(0);
+  clearCollapseTimer();
 }, { immediate: true });
 
 const resolvedTimestampLabel = computed(() => {
   if (isExpired.value) return '逾時時間';
   if (resolvedAtIsCreatedFallback.value) return '建立時間';
-  return isConfirmed.value ? '執行時間' : '取消時間';
+  if (isConfirmed.value) return '完成時間';
+  if (isFailed.value) return '失敗時間';
+  return '取消時間';
 });
 const createdAtLabel = computed(() => {
   if (!Number.isFinite(props.createdAt)) return '';
   return RESOLVED_AT_FORMATTER.format(new Date(props.createdAt));
 });
 
-// Show countdown pill when ≤ 60s remain; turn danger red when ≤ 30s
-const showCountdown = computed(() => isPending.value && hasDeadline.value && remainingSeconds.value <= COUNTDOWN_WARN_THRESHOLD_SECONDS);
-const countdownDanger = computed(() => remainingSeconds.value <= COUNTDOWN_DANGER_THRESHOLD_SECONDS);
+const showCountdown = computed(() => (
+  isPending.value
+  && hasDeadline.value
+  && remainingSeconds.value > 0
+  && remainingSeconds.value < COUNTDOWN_DANGER_THRESHOLD_SECONDS
+));
+const countdownLevel = computed(() => {
+  if (remainingSeconds.value <= COUNTDOWN_DANGER_THRESHOLD_SECONDS) return 'danger';
+  if (remainingSeconds.value <= COUNTDOWN_WARN_THRESHOLD_SECONDS) return 'warn';
+  return 'safe';
+});
+const countdownClass = computed(() => `countdown-${countdownLevel.value}`);
 const expiresAtLabel = computed(() => {
   if (!hasDeadline.value) return '';
   return EXPIRES_AT_FORMATTER.format(new Date(deadlineMs.value));
@@ -244,6 +274,73 @@ const riskReason = computed(() => {
   return RISK_REASONS[cmd] || null;
 });
 
+const cardAccent = computed(() => {
+  if (isFailed.value || isExpired.value) return 'var(--accent-danger)';
+  if (isPending.value) return 'var(--accent-warning)';
+  if (isExecuting.value) return 'var(--accent-primary)';
+  if (isConfirmed.value) return 'var(--accent-success)';
+  return 'var(--border-secondary)';
+});
+
+const statusTone = computed(() => {
+  if (isFailed.value || isExpired.value) return 'var(--accent-danger)';
+  if (isPending.value) return 'var(--accent-warning)';
+  if (isExecuting.value) return 'var(--accent-primary)';
+  if (isConfirmed.value) return 'var(--accent-success)';
+  return 'var(--text-tertiary)';
+});
+
+const statusLabel = computed(() => {
+  if (isExpired.value) return '已逾時';
+  if (isExecuting.value) return '執行中';
+  if (isPending.value) return '待確認';
+  if (isConfirmed.value) return '已完成';
+  if (isFailed.value) return '失敗';
+  return '已取消';
+});
+
+const headerTitle = computed(() => {
+  if (isExpired.value) return '確認已逾時';
+  if (isExecuting.value) return '指令執行中';
+  if (isPending.value) return '系統變更確認';
+  if (isConfirmed.value) return '指令執行成功';
+  if (isFailed.value) return '指令執行失敗';
+  return '操作已取消';
+});
+
+const badgeClass = computed(() => {
+  if (isExpired.value) return 'badge-expired';
+  if (isExecuting.value) return 'badge-executing';
+  if (isPending.value) return 'badge-pending';
+  if (isConfirmed.value) return 'badge-confirmed';
+  if (isFailed.value) return 'badge-failed';
+  return 'badge-cancelled';
+});
+
+const summaryAriaLabel = computed(() => {
+  if (isConfirmed.value) return '指令已完成，點擊展開詳情';
+  if (isFailed.value) return '指令執行失敗，點擊展開詳情';
+  if (isExpired.value) return '確認已逾時，點擊展開詳情';
+  return '操作已取消，點擊展開詳情';
+});
+
+const groupAriaLabel = computed(() => {
+  if (isExpired.value) return '確認已逾時';
+  if (isExecuting.value) return '指令執行中';
+  if (isPending.value) return '高風險指令確認';
+  if (isConfirmed.value) return '指令已確認執行';
+  if (isFailed.value) return '指令執行失敗';
+  return '操作已取消';
+});
+
+const commandTextColor = computed(() => {
+  if (isFailed.value || isExpired.value) return 'var(--accent-danger)';
+  if (isPending.value) return 'var(--accent-warning)';
+  if (isExecuting.value) return 'var(--accent-primary)';
+  if (isConfirmed.value) return 'var(--accent-success)';
+  return 'var(--text-tertiary)';
+});
+
 async function copyCommand() {
   try {
     if (navigator.clipboard?.writeText) {
@@ -258,10 +355,10 @@ async function copyCommand() {
       document.body.removeChild(ta);
     }
     copied.value = true;
-    setTimeout(() => { copied.value = false; }, 2000);
+    setTimeout(() => { copied.value = false; }, 3000);
   } catch {
     copyFailed.value = true;
-    setTimeout(() => { copyFailed.value = false; }, 2000);
+    setTimeout(() => { copyFailed.value = false; }, 3000);
   }
 }
 
@@ -269,6 +366,10 @@ function collapseDetails() {
   if (!isResolved.value) return;
   collapsed.value = true;
   nextTick(() => summaryRef.value?.focus());
+}
+
+function resendCommand() {
+  emit('resend-command', props.command);
 }
 </script>
 
@@ -280,17 +381,16 @@ function collapseDetails() {
             type="button"
             @click="collapsed = false"
             class="cmd-summary-row"
-            :style="{
-              borderColor: isConfirmed ? 'var(--accent-success)' : isExpired ? 'var(--accent-danger)' : 'var(--border-secondary)',
-            }"
-            :aria-label="isConfirmed ? '指令已執行，點擊展開詳情' : isExpired ? '確認已逾時，點擊展開詳情' : '操作已取消，點擊展開詳情'">
+            :style="{ borderColor: cardAccent }"
+            :aria-label="summaryAriaLabel">
       <!-- Status icon + label -->
       <span class="cmd-summary-status"
-            :style="{ color: isConfirmed ? 'var(--accent-success)' : isExpired ? 'var(--accent-danger)' : 'var(--text-tertiary)' }">
-        <span v-if="isConfirmed">&#9989;</span>
-        <span v-else-if="isExpired">&#9200;</span>
-        <span v-else>&#128683;</span>
-        <span class="cmd-summary-label">{{ isConfirmed ? '已執行' : isExpired ? '已逾時' : '已取消' }}</span>
+            :style="{ color: statusTone }">
+        <span v-if="isConfirmed" aria-hidden="true">&#9989;</span>
+        <span v-else-if="isFailed" aria-hidden="true">&#10060;</span>
+        <span v-else-if="isExpired" aria-hidden="true">&#9200;</span>
+        <span v-else aria-hidden="true">&#128683;</span>
+        <span class="cmd-summary-label">{{ isConfirmed ? '已完成' : isFailed ? '失敗' : isExpired ? '已逾時' : '已取消' }}</span>
       </span>
       <!-- Command preview -->
       <code class="cmd-summary-cmd">{{ command }}</code>
@@ -305,11 +405,11 @@ function collapseDetails() {
     <Transition name="cmd-card">
       <div v-if="!collapsed"
            role="group"
-           :aria-label="isExpired ? '確認已逾時' : isPending ? '高風險指令確認' : isConfirmed ? '指令已確認執行' : '操作已取消'"
+           :aria-label="groupAriaLabel"
            class="rounded-xl p-3 border transition-all"
            :style="{
              backgroundColor: 'var(--bg-input)',
-             borderColor: isExpired ? 'var(--accent-danger)' : isPending ? 'var(--accent-warning)' : isConfirmed ? 'var(--accent-success)' : 'var(--border-secondary)',
+             borderColor: cardAccent,
            }">
 
         <!-- Header row -->
@@ -321,20 +421,33 @@ function collapseDetails() {
           :aria-label="isResolved ? '收合詳情' : undefined"
           :role="isResolved ? undefined : 'status'"
           :aria-live="isResolved ? undefined : 'polite'"
-          :style="{ color: isExpired ? 'var(--accent-danger)' : isPending ? 'var(--accent-warning)' : isConfirmed ? 'var(--accent-success)' : 'var(--text-tertiary)' }"
+          :style="{ color: statusTone }"
           @click="collapseDetails">
           <span v-if="isExpired">&#9200;</span>
+          <svg
+            v-else-if="isExecuting"
+            class="cmd-spinner"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle class="cmd-spinner-track" cx="12" cy="12" r="9" />
+            <path class="cmd-spinner-indicator" d="M21 12a9 9 0 0 0-9-9" />
+          </svg>
           <span v-else-if="isPending">&#9888;&#65039;</span>
           <span v-else-if="isConfirmed">&#9989;</span>
+          <span v-else-if="isFailed">&#10060;</span>
           <span v-else>&#128683;</span>
-          <span v-if="isExpired">確認已逾時</span>
-          <span v-else-if="isPending">系統變更確認</span>
-          <span v-else-if="isConfirmed">指令已確認執行</span>
-          <span v-else>操作已取消</span>
+          <span>{{ headerTitle }}</span>
+          <!-- Status badge: text-based state label (colour-blind accessible) -->
+          <span class="cmd-status-badge"
+                :class="badgeClass">
+            {{ statusLabel }}
+          </span>
           <!-- Countdown pill -->
           <span v-if="showCountdown && !isExpired"
                 class="ml-auto text-[11px] font-mono px-2 py-0.5 rounded-full countdown-pill"
-                :class="countdownDanger ? 'countdown-danger' : 'countdown-warn'"
+                :class="countdownClass"
                 aria-live="polite">
             {{ formatRemaining(remainingSeconds) }}
           </span>
@@ -347,12 +460,15 @@ function collapseDetails() {
           </span>
         </component>
 
-        <div v-if="isPending && hasDeadline" class="mb-2 text-[11px] font-mono" style="color: var(--text-tertiary);">
+        <div v-if="showCountdown" class="mb-2 text-[11px] font-mono" style="color: var(--text-tertiary);">
           剩餘時間：{{ remainingLabel }} ｜ 到期時間：{{ expiresAtLabel }}
         </div>
+        <div v-if="isExecuting" class="mb-2 text-xs cmd-executing-row">
+          正在執行：<code class="cmd-inline-command">{{ command }}</code>
+        </div>
         <!-- Resolved timestamp -->
-        <div v-if="(isConfirmed || isCancelled || isExpired) && resolvedAt" class="mb-2 text-[11px] font-mono" style="color: var(--text-tertiary);">
-          {{ resolvedTimestampLabel }}：{{ resolvedAt }}
+        <div v-if="(isConfirmed || isFailed || isCancelled || isExpired) && resolvedAtLabel" class="mb-2 text-[11px] font-mono" style="color: var(--text-tertiary);">
+          {{ resolvedTimestampLabel }}：{{ resolvedAtLabel }}
         </div>
         <div v-if="createdAtLabel && !resolvedAtIsCreatedFallback" class="mb-2 text-[11px] font-mono" style="color: var(--text-tertiary);">
           建立時間：{{ createdAtLabel }}
@@ -368,6 +484,16 @@ function collapseDetails() {
         <!-- Expired explanation -->
         <div v-if="isExpired" class="mb-2 text-xs" style="color: var(--text-secondary);">
           確認視窗已過期，請重新發送指令。
+        </div>
+        <div v-if="isExpired" class="mt-2 mb-3">
+          <button
+            type="button"
+            class="cmd-resend-btn"
+            :disabled="disabled"
+            @click="resendCommand"
+          >
+            {{ disabled ? '處理中...' : '重新發送此指令' }}
+          </button>
         </div>
 
         <!-- Code block with copy button -->
@@ -389,10 +515,10 @@ function collapseDetails() {
               </svg>
             </button>
           </div>
-          <pre class="p-3 overflow-x-auto text-sm font-mono m-0 border-0 rounded-none"
+          <pre class="p-3 overflow-x-auto whitespace-pre-wrap break-all text-sm font-mono m-0 border-0 rounded-none"
                :style="{
                  backgroundColor: 'var(--code-bg)',
-                 color: isPending ? 'var(--accent-warning)' : isConfirmed ? 'var(--accent-success)' : 'var(--text-tertiary)'
+                 color: commandTextColor
                }"><code>{{ command }}</code></pre>
         </div>
 
@@ -432,6 +558,10 @@ function collapseDetails() {
   letter-spacing: 0.01em;
   font-weight: 600;
   transition: background-color 0.3s, color 0.3s;
+}
+.countdown-safe {
+  background-color: color-mix(in srgb, var(--accent-success) 15%, transparent);
+  color: var(--accent-success);
 }
 .countdown-warn {
   background-color: color-mix(in srgb, var(--accent-warning) 15%, transparent);
@@ -565,6 +695,41 @@ function collapseDetails() {
   color: var(--text-tertiary);
 }
 
+.cmd-spinner {
+  width: 14px;
+  height: 14px;
+  animation: cmd-spin 1s linear infinite;
+}
+.cmd-spinner-track {
+  fill: none;
+  stroke: color-mix(in srgb, currentColor 25%, transparent);
+  stroke-width: 2.6;
+}
+.cmd-spinner-indicator {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+@keyframes cmd-spin {
+  to { transform: rotate(360deg); }
+}
+
+.cmd-executing-row {
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cmd-inline-command {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
 /* Card enter/leave transitions */
 .cmd-card-enter-active,
 .cmd-card-leave-active {
@@ -578,6 +743,25 @@ function collapseDetails() {
   max-height: 0;
 }
 
+/* Status badge (colour-blind accessible text label) */
+.cmd-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1.5px solid currentColor;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.6;
+}
+.badge-pending  { color: var(--accent-warning); }
+.badge-executing { color: var(--accent-primary); }
+.badge-expired  { color: var(--accent-danger);  }
+.badge-confirmed { color: var(--accent-success); }
+.badge-failed { color: var(--accent-danger); }
+.badge-cancelled { color: var(--text-tertiary);  }
+
 /* Summary enter/leave transitions */
 .cmd-collapse-enter-active,
 .cmd-collapse-leave-active {
@@ -589,5 +773,25 @@ function collapseDetails() {
 .cmd-collapse-leave-to {
   opacity: 0;
   max-height: 0;
+}
+
+.cmd-resend-btn {
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 35%, var(--border-primary));
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background-color: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.cmd-resend-btn:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary) 48%, var(--border-primary));
+}
+.cmd-resend-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 </style>

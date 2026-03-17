@@ -1,11 +1,13 @@
 <script setup>
 import { ref, watch, nextTick, computed, onMounted, onBeforeUnmount } from 'vue';
 import { CHAT_CONFIG } from '../config/app.config';
+import { useToastQueue } from '../composables/useToastQueue';
 
 const props = defineProps(['isProcessing', 'userInput', 'statusMessage', 'availableModels', 'isAdmin', 'isOnline']);
 const emit = defineEmits(['update:model', 'update:userInput', 'send', 'stop', 'composer-resize']);
 const model = defineModel('model');
 const maxMessageLength = CHAT_CONFIG.maxMessageLength || 8000;
+const { info: showInfoToast } = useToastQueue();
 
 const SLASH_COMMANDS = [
   { cmd: '/addSSHKey', desc: '為既有使用者加入 SSH key', hint: '/addSSHKey [username]' },
@@ -68,6 +70,9 @@ const modelGroups = computed(() => {
     groups[cat].push({
       value: key,
       label: unavailable ? `${baseLabel} (⚠️ 目前負載高)` : baseLabel,
+      baseLabel,
+      unavailable,
+      category: cat,
     });
   }
   return Object.keys(groups).map(label => ({
@@ -106,11 +111,14 @@ const textareaRef = ref(null);
 const isComposing = ref(false);
 const isListening = ref(false);
 const isFocused = ref(false);
+const inputError = ref('');
 let recognition = null;
 
 const activeSlashIndex = ref(0);
 const slashAreaRef = ref(null);
 const slashMenuDismissed = ref(false);
+const isModelDropdownOpen = ref(false);
+const modelDropdownRef = ref(null);
 
 // Slash command "picker" parsing:
 // - Trigger when the (trimStart) input begins with "/"
@@ -174,13 +182,35 @@ watch(() => slashState.value?.query, () => {
 
 const isSlashMenuOpen = computed(() => showSlashMenu.value && !slashMenuDismissed.value);
 
+const charCounterColor = computed(() => {
+  const len = (props.userInput || '').length;
+  if (len >= maxMessageLength) return 'var(--accent-danger, #ef4444)';
+  if (len >= maxMessageLength * 0.8) return '#f59e0b';
+  return 'var(--text-tertiary)';
+});
+
+const showCharCounter = computed(() => (props.userInput?.length || 0) > maxMessageLength * 0.5);
+
+const toggleModelDropdown = () => {
+  isModelDropdownOpen.value = !isModelDropdownOpen.value;
+};
+
+const selectModel = (key, unavailable) => {
+  if (unavailable) return;
+  model.value = key;
+  isModelDropdownOpen.value = false;
+};
+
 const onGlobalPointerDown = (e) => {
-  if (!isSlashMenuOpen.value) return;
-  const area = slashAreaRef.value;
-  if (!area) return;
   const t = e?.target;
-  if (t && area.contains(t)) return;
-  slashMenuDismissed.value = true;
+  if (isSlashMenuOpen.value) {
+    const area = slashAreaRef.value;
+    if (area && !area.contains(t)) slashMenuDismissed.value = true;
+  }
+  if (isModelDropdownOpen.value) {
+    const area = modelDropdownRef.value;
+    if (area && !area.contains(t)) isModelDropdownOpen.value = false;
+  }
 };
 
 onMounted(() => {
@@ -219,7 +249,19 @@ watch(() => props.userInput, () => {
 
 const onInput = (e) => {
   emit('update:userInput', e.target.value);
+  inputError.value = '';
   adjustHeight();
+};
+
+const handleSend = () => {
+  const v = props.userInput || '';
+  if (props.isProcessing || props.isOnline === false || !v.trim()) return;
+  if (v.length > maxMessageLength) {
+    inputError.value = `訊息過長（${v.length} / ${maxMessageLength} 字元）`;
+    return;
+  }
+  inputError.value = '';
+  emit('send');
 };
 
 const setInput = (v) => {
@@ -308,7 +350,7 @@ const onEnterPress = (e) => {
     }
   }
 
-  if (!props.isProcessing && props.isOnline !== false && v.trim()) emit('send');
+  if (!props.isProcessing && props.isOnline !== false && v.trim()) handleSend();
 };
 
 const toggleVoice = () => {
@@ -320,7 +362,7 @@ const toggleVoice = () => {
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert("您的瀏覽器不支援語音輸入 (Web Speech API)");
+    showInfoToast('您的瀏覽器不支援語音輸入 (Web Speech API)', 3000);
     return;
   }
 
@@ -365,27 +407,54 @@ const toggleVoice = () => {
     <div class="flex items-center justify-between px-4 py-2 border-b" style="border-color: var(--border-primary);">
       <div class="flex items-center gap-4">
         <div class="flex flex-col gap-1">
-          <!-- Model selector -->
-          <select
-            v-model="model"
-            class="text-xs uppercase border rounded-lg px-2 py-1 cursor-pointer outline-none"
-            style="background-color: var(--bg-input); color: var(--text-secondary); border-color: var(--border-primary);"
-          >
-            <optgroup
-              v-for="group in modelGroups"
-              :key="group.label"
-              :label="group.label"
+          <!-- Model selector (custom dropdown) -->
+          <div ref="modelDropdownRef" class="relative">
+            <button
+              type="button"
+              @click="toggleModelDropdown"
+              class="flex items-center gap-1.5 text-xs border rounded-lg px-2 py-1.5 cursor-pointer outline-none"
+              style="background-color: var(--bg-input); color: var(--text-secondary); border-color: var(--border-primary);"
             >
-              <option
-                v-for="opt in group.options"
-                :key="opt.value"
-                :value="opt.value"
-                class="py-1"
-              >
-                {{ opt.label }}
-              </option>
-            </optgroup>
-          </select>
+              <span class="font-mono uppercase">{{ selectedModelConfig?.label || model }}</span>
+              <span v-if="selectedModelConfig?.available === false" style="color: var(--accent-danger, #ef4444);">⚠️</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 opacity-50 transition-transform" :class="{ 'rotate-180': isModelDropdownOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div
+              v-if="isModelDropdownOpen"
+              class="absolute left-0 top-full mt-1 min-w-[200px] rounded-xl border shadow-lg overflow-hidden z-50"
+              style="background-color: var(--bg-input); border-color: var(--border-primary);"
+            >
+              <template v-for="group in modelGroups" :key="group.label">
+                <div class="px-3 pt-2 pb-1 text-[10px] uppercase font-semibold tracking-wide" style="color: var(--text-tertiary);">
+                  {{ group.label }}
+                </div>
+                <button
+                  v-for="opt in group.options"
+                  :key="opt.value"
+                  type="button"
+                  @click="selectModel(opt.value, opt.unavailable)"
+                  :disabled="opt.unavailable"
+                  class="w-full text-left px-3 py-2 flex items-center justify-between gap-3 border-b last:border-b-0 transition-colors"
+                  :class="opt.unavailable ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+                  :style="[
+                    { borderColor: 'color-mix(in srgb, var(--border-primary) 60%, transparent)' },
+                    model === opt.value ? { backgroundColor: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' } : {}
+                  ]"
+                >
+                  <div class="flex flex-col gap-0.5 min-w-0">
+                    <span class="text-xs font-mono uppercase" style="color: var(--text-primary);">{{ opt.baseLabel }}</span>
+                    <span v-if="opt.unavailable" class="text-[10px]" style="color: var(--accent-danger, #ef4444);">⚠️ 高負載</span>
+                    <span v-else class="text-[10px]" style="color: var(--text-tertiary);">{{ opt.category }}</span>
+                  </div>
+                  <svg v-if="model === opt.value" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 flex-shrink-0" style="color: var(--accent-primary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+              </template>
+            </div>
+          </div>
           <div
             v-if="selectedModelConfig && selectedModelConfig.available === false"
             class="text-[11px] font-mono flex items-center gap-2"
@@ -467,11 +536,19 @@ const toggleVoice = () => {
         </div>
 
         <div
-          v-if="userInput.length > maxMessageLength * 0.8"
-          class="px-2 pb-1 text-[11px] font-mono text-right"
-          :style="{ color: userInput.length >= maxMessageLength ? 'var(--color-danger, #ef4444)' : 'var(--text-tertiary)' }"
+          v-if="inputError"
+          class="px-2 pt-1 text-[11px] font-mono"
+          style="color: var(--accent-danger, #ef4444);"
         >
-          {{ userInput.length }} / {{ maxMessageLength }}
+          ⚠ {{ inputError }}
+        </div>
+
+        <div
+          v-if="showCharCounter"
+          class="px-2 pb-1 text-[11px] font-mono text-right"
+          :style="{ color: charCounterColor }"
+        >
+          {{ (userInput || '').length }} / {{ maxMessageLength }}
         </div>
       </div>
 
@@ -517,7 +594,7 @@ const toggleVoice = () => {
           </button>
 
           <!-- Send button (has text) -->
-          <button v-else-if="userInput.trim()" key="send" @click="isOnline !== false && emit('send')"
+          <button v-else-if="userInput.trim()" key="send" @click="handleSend()"
                   class="action-btn-base"
                   :class="isOnline !== false ? 'action-btn-send' : 'opacity-30 cursor-not-allowed'"
                   :style="isOnline !== false ? 'background-color: var(--accent-primary); color: white;' : 'background-color: var(--bg-tertiary); color: var(--text-tertiary);'"

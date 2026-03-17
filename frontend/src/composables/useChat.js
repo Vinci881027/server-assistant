@@ -12,6 +12,7 @@ import { CHAT_CONFIG } from '../config/app.config'
 const MAX_RETRIES = 2
 const RETRY_BASE_DELAY_MS = 1500
 const RETRY_JITTER_MAX_MS = 3000
+const RETRY_DISPLAY_TOTAL_ATTEMPTS = MAX_RETRIES + 1
 
 function extractErrorCode(payload) {
   if (!payload || typeof payload !== 'object') return null
@@ -205,20 +206,30 @@ function buildErrorMessage(type, attempt, delaySec = 0, options = {}) {
   }
 }
 
-function buildRetryStatusMessage(classification, remainingSec, attempt) {
+function buildRetryStatusMessage(classification, remainingSec, attempt = 1, totalAttempts = RETRY_DISPLAY_TOTAL_ATTEMPTS) {
+  const safeAttempt = Number.isFinite(attempt) && attempt > 0 ? attempt : 1
+  const safeTotalAttempts = Number.isFinite(totalAttempts) && totalAttempts > 0
+    ? Math.max(totalAttempts, safeAttempt)
+    : safeAttempt
+  const retryProgressLabel = `正在重試（${safeAttempt}/${safeTotalAttempts}）`
+
+  if (classification.type === 'network') {
+    return `連線不穩，${retryProgressLabel}... ${remainingSec} 秒後自動重試`
+  }
+
   if (classification.type === 'rateLimit') {
     if (classification.rateLimitReason === 'user_rate_limit' || classification.rateLimitReason === 'user_tpm_limit') {
-      return `您的請求太頻繁，請稍後 ${remainingSec} 秒`
+      return `${retryProgressLabel}，您的請求太頻繁，${remainingSec} 秒後自動重試`
     }
     if (classification.rateLimitReason === 'global_tpm_limit') {
-      return `系統目前繁忙，請稍後 ${remainingSec} 秒再試`
+      return `${retryProgressLabel}，系統目前繁忙，${remainingSec} 秒後自動重試`
     }
     if (classification.allKeysExhausted) {
-      return `目前 AI 服務繁忙，請等待 ${remainingSec} 秒後重試，或切換至其他模型`
+      return `${retryProgressLabel}，目前 AI 服務繁忙，${remainingSec} 秒後自動重試，或切換至其他模型`
     }
-    return `系統繁忙，將在 ${remainingSec} 秒後自動重試...`
+    return `${retryProgressLabel}，系統繁忙，將在 ${remainingSec} 秒後自動重試...`
   }
-  return `⏳ 連線重試中，${remainingSec} 秒後進行第 ${attempt} 次重試...`
+  return `${retryProgressLabel}，${remainingSec} 秒後自動重試...`
 }
 
 /**
@@ -248,6 +259,8 @@ export function useChat() {
     remainingSec: 0,
     totalSec: 0,
   })
+  /** Human-readable label shown in the typing indicator during tool execution. */
+  const toolCallStatus = ref(null)
   // Holds the resolve fn of the "skip delay" promise during a countdown
   let _skipDelayResolve = null
 
@@ -265,12 +278,49 @@ export function useChat() {
    * @param {string} data - SSE event data payload (may contain newlines)
    * @param {Object} aiMsgObj - AI message object to update
    */
+  // Map backend tool type codes to Chinese display labels
+  const TOOL_CALL_LABELS = {
+    cmd:   (detail) => `⚙️ 正在執行：${detail}`,
+    ls:    (detail) => `⚙️ 正在列出：${detail}`,
+    read:  (detail) => `⚙️ 正在讀取：${detail}`,
+    write: (detail) => `⚙️ 正在寫入：${detail}`,
+    mkdir: (detail) => `⚙️ 正在建立目錄：${detail}`,
+    users: (detail) => `⚙️ 管理使用者：${detail}`,
+    ssh:   (detail) => `⚙️ 管理 SSH 金鑰：${detail}`,
+  }
+
+  function parseToolCallStatus(raw) {
+    // [STATUS:TOOL_CALL:type:detail]
+    const callMatch = raw.match(/^\[STATUS:TOOL_CALL:([^:]+):(.+)\]$/)
+    if (callMatch) {
+      const type = callMatch[1]
+      const detail = callMatch[2]
+      const labelFn = TOOL_CALL_LABELS[type]
+      return labelFn ? labelFn(detail) : `⚙️ 正在執行工具：${detail}`
+    }
+    // [STATUS:TOOL_DONE]
+    if (raw.trim() === '[STATUS:TOOL_DONE]') {
+      return '✏️ 整理結果中...'
+    }
+    return null
+  }
+
   function processEventData(data, aiMsgObj) {
     if (data == null) return
 
-    // Handle status messages
-    if (data.trim().startsWith('[STATUS:')) {
+    // Handle status messages — update toolCallStatus but don't append to content
+    const trimmed = data.trim()
+    if (trimmed.startsWith('[STATUS:')) {
+      const label = parseToolCallStatus(trimmed)
+      if (label !== null) {
+        toolCallStatus.value = label
+      }
       return
+    }
+
+    // First real content token — clear tool-call indicator
+    if (toolCallStatus.value !== null) {
+      toolCallStatus.value = null
     }
 
     // Clear status message when receiving content
@@ -364,7 +414,7 @@ export function useChat() {
           isAborted = true
           try {
             await reader.cancel()
-          } catch (cancelError) {
+          } catch {
             // Ignore cancellation race errors during abort
           }
           break
@@ -422,7 +472,12 @@ export function useChat() {
         hasPendingCommandMarker(aiMsgObj.content)
 
       if ((!aiMsgObj.content || !aiMsgObj.content.trim()) && !hasCommand) {
-        aiMsgObj.content = '⚠️ (系統提示：AI 未回傳任何內容，請稍後再試或檢查後端日誌。)'
+        aiMsgObj.content = '⚠️ AI 未能回應（空回應）'
+        aiMsgObj.emptyResponse = true
+        aiMsgObj.errorType = 'emptyResponse'
+      } else if (aiMsgObj.content && aiMsgObj.content.trim() === '⚠️ AI 未能回應（空回應）') {
+        aiMsgObj.emptyResponse = true
+        aiMsgObj.errorType = 'emptyResponse'
       }
     } catch (error) {
       try {
@@ -461,6 +516,7 @@ export function useChat() {
   function resetRetryIndicators() {
     isRetrying.value = false
     statusMessage.value = ''
+    toolCallStatus.value = null
     retryCountdown.value = {
       active: false,
       type: '',
@@ -478,6 +534,7 @@ export function useChat() {
   async function sendWithRetry(params, aiMsgObj) {
     resetRetryIndicators()
     let boundedRetryAttempt = 0
+    let retryDisplayAttempt = 0
     let lastRetryType = null
     // Capture signal once — stopStreaming() sets abortController.value = null,
     // so re-reading it inside the loop would see null and miss the abort.
@@ -525,6 +582,7 @@ export function useChat() {
             allKeysExhausted: classified.allKeysExhausted,
             rateLimitReason: classified.rateLimitReason,
           })
+          aiMsgObj.errorType = classified.type
           resetRetryIndicators()
           return { status: 'failed', errorType: classified.type }
         }
@@ -534,12 +592,19 @@ export function useChat() {
         }
         lastRetryType = classified.type
         const delaySec = Math.ceil(classified.delayMs / 1000)
+        retryDisplayAttempt += 1
+        const retryDisplayTotalAttempts = RETRY_DISPLAY_TOTAL_ATTEMPTS
 
         // Countdown display — each 1-second tick is abort-aware; retryNow() skips remaining delay
         isRetrying.value = true
         const skipPromise = new Promise(resolve => { _skipDelayResolve = resolve })
         countdownLoop: for (let remaining = delaySec; remaining > 0; remaining--) {
-          statusMessage.value = buildRetryStatusMessage(classified, remaining, boundedRetryAttempt)
+          statusMessage.value = buildRetryStatusMessage(
+            classified,
+            remaining,
+            retryDisplayAttempt,
+            retryDisplayTotalAttempts,
+          )
           retryCountdown.value = {
             active: true,
             type: classified.type,
@@ -579,7 +644,6 @@ export function useChat() {
     if (!msg || isProcessing.value) return
 
     if (msg.length > MAX_MESSAGE_LENGTH) {
-      statusMessage.value = `訊息過長（${msg.length} 字元），上限為 ${MAX_MESSAGE_LENGTH} 字元`
       return
     }
 
@@ -618,7 +682,7 @@ export function useChat() {
     }
 
     // Add user message and AI placeholder in one reactive update
-    messages.value.push({ role: 'user', content: msg }, { role: 'ai', content: '' })
+    messages.value.push({ role: 'user', content: msg }, { role: 'ai', content: '', modelKey: model.value })
     const aiMsgObj = messages.value[messages.value.length - 1]
 
     // Create abort controller for this request
@@ -645,6 +709,7 @@ export function useChat() {
       isProcessing.value = false
       abortController.value = null
       statusMessage.value = ''
+      toolCallStatus.value = null
 
       // Refresh conversations list only for new conversations
       if (isNewConversation) {
@@ -685,5 +750,6 @@ export function useChat() {
     retryNow,
     isRetrying,
     retryCountdown,
+    toolCallStatus,
   }
 }

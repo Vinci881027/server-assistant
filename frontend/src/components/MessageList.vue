@@ -1,10 +1,10 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
-import MarkdownIt from 'markdown-it';
-import DOMPurify from 'dompurify';
-import ChatCommandRequest from './ChatCommandRequest.vue';
+import { useVirtualizer } from '@tanstack/vue-virtual';
+import MessageItem from './MessageItem.vue';
 import ControlPanel from './ControlPanel.vue';
-import { UI_CONFIG, COMMAND_CONFIRM_TIMEOUT_SECONDS } from '../config/app.config';
+import { UI_CONFIG } from '../config/app.config';
+import { useMarkdownRenderer } from '../composables/useMarkdownRenderer';
 import { appendQuoteToDraft } from '../utils/messageActions';
 
 const props = defineProps({
@@ -17,6 +17,7 @@ const props = defineProps({
   availableModels: { type: Object, default: () => ({}) },
   statusMessage: { type: String, default: '' },
   isRetrying: { type: Boolean, default: false },
+  toolCallStatus: { type: String, default: null },
   retryCountdown: {
     type: Object,
     default: () => ({
@@ -31,6 +32,7 @@ const props = defineProps({
   canRegenerateMessage: { type: Function, default: null },
   hasMoreFromServer: { type: Boolean, default: false },
   isHistoryLoading: { type: Boolean, default: false },
+  historyLoadFailed: { type: Boolean, default: false },
   isLoadingMore: { type: Boolean, default: false },
 });
 
@@ -43,6 +45,7 @@ const emit = defineEmits([
   'edit-message',
   'regenerate-message',
   'load-more',
+  'retry-history',
 ]);
 
 const QUICK_START_COMMANDS = Object.freeze([
@@ -50,6 +53,26 @@ const QUICK_START_COMMANDS = Object.freeze([
   { cmd: '/docker', label: 'Docker', desc: '快速查看容器與資源使用' },
   { cmd: '/help', label: '指令說明', desc: '列出可用指令與功能' },
 ]);
+const ALL_EXAMPLE_PROMPTS = Object.freeze([
+  '我的磁碟快滿了，怎麼辦？',
+  '幫我看看有哪些 Docker 容器在跑',
+  '系統負載很高，是哪個程式在吃 CPU？',
+  '記憶體用量怎麼樣？有沒有快超標？',
+  '目前有哪些使用者登入了系統？',
+  '有哪些 port 正在監聽中？',
+  '幫我查看 /var/log 最新的錯誤訊息',
+  '硬碟空間怎麼分布的？哪個目錄最大？',
+]);
+
+function pickRandomExamples(pool, count = 3) {
+  return [...pool].sort(() => Math.random() - 0.5).slice(0, count);
+}
+
+const displayedExamples = ref(pickRandomExamples(ALL_EXAMPLE_PROMPTS));
+
+const refreshExamples = () => {
+  displayedExamples.value = pickRandomExamples(ALL_EXAMPLE_PROMPTS);
+};
 const TOUCH_DEVICE_QUERY = '(hover: none), (pointer: coarse)';
 const LONG_PRESS_DELAY_MS = 420;
 const LONG_PRESS_MOVE_TOLERANCE_PX = 14;
@@ -67,44 +90,11 @@ const longPressState = {
   startY: 0,
 };
 
-const md = new MarkdownIt({
-  html: false,
-  linkify: true,
-  typographer: true
-});
-
-// Custom fence renderer: wrap code blocks with a header containing language label + copy button
-const defaultFence = md.renderer.rules.fence || function(tokens, idx, options, env, self) {
-  return self.renderToken(tokens, idx, options);
-};
-
-md.renderer.rules.fence = (tokens, idx, options, env, self) => {
-  const token = tokens[idx];
-  const rawCode = token.content;
-  // Encode for safe embedding in data attribute
-  const encodedCode = rawCode.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const lang = token.info.trim().split(/\s+/)[0] || '';
-  const langLabel = lang ? `<span class="code-block-lang">${md.utils.escapeHtml(lang)}</span>` : '';
-
-  // Render the inner <pre><code> using default
-  const codeHtml = defaultFence(tokens, idx, options, env, self);
-
-  return `<div class="code-block-wrapper">`
-    + `<div class="code-block-header">`
-    + langLabel
-    + `<button type="button" class="copy-code-btn" data-code="${encodedCode}" title="複製程式碼">`
-    + `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`
-    + `</button>`
-    + `</div>`
-    + codeHtml
-    + `</div>`;
-};
-
-const DEFAULT_MAX_RENDER_LENGTH = 20000;
 const MAX_RENDER_LENGTH = Number.isInteger(UI_CONFIG.markdownMaxRenderLength)
   && UI_CONFIG.markdownMaxRenderLength > 0
   ? UI_CONFIG.markdownMaxRenderLength
-  : DEFAULT_MAX_RENDER_LENGTH;
+  : 20000;
+const { renderMarkdown } = useMarkdownRenderer(MAX_RENDER_LENGTH);
 
 // Message windowing only affects rendering; the store keeps all loaded history.
 const DEFAULT_WINDOW_SIZE = 80;
@@ -119,8 +109,9 @@ const windowStart = ref(0);
 
 const hasHiddenMessages = computed(() => windowStart.value > 0 || props.hasMoreFromServer);
 const visibleMessages = computed(() => props.messages.slice(windowStart.value));
-const showHistorySkeleton = computed(() => props.isHistoryLoading && props.messages.length === 0);
-const showWelcomeCard = computed(() => !showHistorySkeleton.value && props.messages.length === 0);
+const showHistorySkeleton = computed(() => props.isHistoryLoading && !props.historyLoadFailed);
+const showHistoryLoadFailed = computed(() => props.historyLoadFailed && props.messages.length === 0);
+const showWelcomeCard = computed(() => !showHistorySkeleton.value && !showHistoryLoadFailed.value && props.messages.length === 0);
 const quickStartDisabled = computed(() => props.isProcessing || props.isOnline === false);
 
 // Track pending server load to prevent window from advancing during prepend
@@ -175,23 +166,6 @@ const loadEarlierMessages = () => {
   });
 };
 
-const renderMarkdown = (text) => {
-  if (!text) return '';
-  if (text.length > MAX_RENDER_LENGTH) {
-    return '<p>[訊息過長，無法渲染，請使用複製功能查看原始內容]</p>';
-  }
-  try {
-    return DOMPurify.sanitize(md.render(text), {
-      ADD_TAGS: ['button'],
-      ADD_ATTR: ['data-code'],
-      FORBID_TAGS: ['style'],
-      FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick', 'onmouseover'],
-    });
-  } catch (err) {
-    console.error('Markdown rendering failed:', err);
-    return '<p>[內容渲染失敗]</p>';
-  }
-};
 
 const messageContainer = ref(null);
 const retryBannerRef = ref(null);
@@ -301,6 +275,7 @@ onBeforeUnmount(() => {
       touchDeviceQuery.removeListener(syncTouchDeviceState);
     }
   }
+  clearThinkingTimer();
   clearLongPressTracking();
   resizeObserver?.disconnect();
   retryBannerObserver?.disconnect();
@@ -329,11 +304,52 @@ const runQuickStartCommand = async (command) => {
   handleComposerSend();
 };
 
+const fillExamplePrompt = (prompt) => {
+  if (!prompt || quickStartDisabled.value) return;
+  emit('update:userInput', prompt);
+};
+
 const jumpToBottom = () => {
   autoStickToBottom.value = true;
   userAtBottom.value = true;
   lockScrollToBottom();
 };
+
+// Typing indicator: visible while waiting for the first AI token OR during mid-stream tool calls
+const showTypingIndicator = computed(() => {
+  if (!props.isProcessing || props.isRetrying) return false;
+  const lastMsg = props.messages[props.messages.length - 1];
+  if (lastMsg?.role !== 'ai') return false;
+  // No content yet (initial thinking / first tool call)
+  if (!lastMsg.content) return true;
+  // Content exists but a tool is executing mid-stream
+  if (props.toolCallStatus) return true;
+  return false;
+});
+const THINKING_STATUS_ESCALATION_SEC = 10;
+const thinkingElapsedSec = ref(0);
+let thinkingTimer = null;
+
+const clearThinkingTimer = () => {
+  if (!thinkingTimer) return;
+  clearInterval(thinkingTimer);
+  thinkingTimer = null;
+};
+
+const startThinkingTimer = () => {
+  clearThinkingTimer();
+  const startedAt = Date.now();
+  thinkingElapsedSec.value = 0;
+  thinkingTimer = setInterval(() => {
+    thinkingElapsedSec.value = Math.floor((Date.now() - startedAt) / 1000);
+  }, 1000);
+};
+
+const typingIndicatorText = computed(() => {
+  if (props.toolCallStatus) return props.toolCallStatus;
+  if (thinkingElapsedSec.value >= THINKING_STATUS_ESCALATION_SEC) return 'AI 仍在思考，請稍候...';
+  return 'AI 正在思考中...';
+});
 
 const showRetryBanner = computed(() => props.isRetrying && Boolean(props.statusMessage));
 const retryProgressPercent = computed(() => {
@@ -378,12 +394,21 @@ watch(showRetryBanner, async (visible) => {
   measureRetryBanner();
 });
 
+watch(showTypingIndicator, (visible) => {
+  if (visible) {
+    startThinkingTimer();
+    return;
+  }
+  clearThinkingTimer();
+  thinkingElapsedSec.value = 0;
+}, { immediate: true });
+
 const writeTextToClipboard = async (text) => {
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);
       return true;
-    } catch (_) {
+    } catch {
       // Fallback below for environments where clipboard API is unavailable/blocked.
     }
   }
@@ -560,15 +585,14 @@ const getMessageStableKey = (msg) => {
   const createdAtText = createdAt === null || createdAt === undefined ? '' : String(createdAt).trim();
   const fingerprint = buildMessageFingerprint(msg, createdAtText);
 
-  let baseKey = '';
-  if (id !== null && id !== undefined && String(id).trim()) {
-    baseKey = `msg:id:${String(id).trim()}`;
-  } else if (createdAtText) {
-    baseKey = `msg:createdAt:${createdAtText}:${hashText(fingerprint)}`;
-  } else {
-    localMessageKeyCounter += 1;
-    baseKey = `msg:local:${localMessageKeyCounter}:${hashText(fingerprint)}`;
-  }
+  const baseKey = id !== null && id !== undefined && String(id).trim()
+    ? `msg:id:${String(id).trim()}`
+    : createdAtText
+      ? `msg:createdAt:${createdAtText}:${hashText(fingerprint)}`
+      : (() => {
+          localMessageKeyCounter += 1;
+          return `msg:local:${localMessageKeyCounter}:${hashText(fingerprint)}`;
+        })();
 
   const resolvedKey = allocateUniqueMessageKey(baseKey);
   messageKeyByObject.set(msg, resolvedKey);
@@ -604,19 +628,33 @@ const shouldCollapseMessage = (msg) => {
   return content.length > 1800 || lineCountOf(content) > 24;
 };
 
-const shouldShowEditAction = (entry) => (
-  entry?.msg?.role === 'user' && !props.isProcessing
-);
-
-const shouldShowRegenerateAction = (entry) => {
-  if (entry?.msg?.role !== 'ai' || props.isProcessing) return false;
-  if (typeof props.canRegenerateMessage === 'function') {
-    return Boolean(props.canRegenerateMessage(entry.absoluteIndex));
-  }
-  return true;
-};
-
 const isExpanded = (messageKey) => Boolean(expandedStates.value[messageKey]);
+
+// Virtual scrolling configuration
+const VIRTUAL_OVERSCAN = Number.isInteger(UI_CONFIG.virtualScrollOverscan) && UI_CONFIG.virtualScrollOverscan > 0
+  ? UI_CONFIG.virtualScrollOverscan
+  : 5;
+const VIRTUAL_ESTIMATE_SIZE = Number.isInteger(UI_CONFIG.virtualScrollEstimateSize) && UI_CONFIG.virtualScrollEstimateSize > 0
+  ? UI_CONFIG.virtualScrollEstimateSize
+  : 120;
+
+const virtualItemCount = computed(() => visibleMessagesWithKeys.value.length);
+
+const rowVirtualizer = useVirtualizer(computed(() => ({
+  count: virtualItemCount.value,
+  getScrollElement: () => messageContainer.value,
+  estimateSize: () => VIRTUAL_ESTIMATE_SIZE,
+  overscan: VIRTUAL_OVERSCAN,
+})));
+
+const virtualItems = computed(() => rowVirtualizer.value.getVirtualItems());
+const totalVirtualSize = computed(() => rowVirtualizer.value.getTotalSize());
+
+const measureElement = (el) => {
+  if (el) {
+    rowVirtualizer.value.measureElement(el);
+  }
+};
 
 const escapeAttributeSelector = (value) => {
   const text = String(value ?? '');
@@ -677,11 +715,39 @@ const toggleExpand = (messageKey) => {
     [messageKey]: expanding
   };
 };
+
+const handleSwitchModel = () => {
+  const modelKeys = Object.keys(props.availableModels || {})
+  const nextModel = modelKeys.find(k => k !== props.model)
+  if (nextModel) {
+    emit('update:model', nextModel)
+  }
+};
+
+defineExpose({
+  scrollToPendingCommand() {
+    let pendingIdx = -1;
+    for (let i = props.messages.length - 1; i >= 0; i--) {
+      if (props.messages[i]?.command?.status === 'pending') {
+        pendingIdx = i;
+        break;
+      }
+    }
+    if (pendingIdx === -1) return;
+    if (pendingIdx < windowStart.value) {
+      windowStart.value = pendingIdx;
+    }
+    const visibleIdx = pendingIdx - windowStart.value;
+    nextTick(() => {
+      rowVirtualizer.value.scrollToIndex(visibleIdx, { behavior: 'smooth' });
+    });
+  },
+});
 </script>
 
 <template>
   <div class="flex flex-col h-full relative min-w-0 floating-stack-root" :style="floatingOverlayVars">
-    <div ref="messageContainer" class="message-list-container flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar" role="log" aria-label="對話訊息">
+    <div ref="messageContainer" class="message-list-container flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar" role="log" aria-label="對話訊息">
       <div v-if="showHistorySkeleton" class="space-y-4" role="status" aria-live="polite" aria-busy="true">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium animate-pulse"
              style="background-color: var(--bg-secondary); color: var(--text-tertiary); border: 1px solid var(--border-primary);">
@@ -708,7 +774,29 @@ const toggleExpand = (messageKey) => {
         </div>
       </div>
 
-      <section v-if="showWelcomeCard" class="chat-welcome-card" aria-label="首次使用引導">
+      <template v-else>
+        <div v-if="showHistoryLoadFailed" class="flex flex-col items-center justify-center gap-3 py-16" role="alert">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+             style="color: var(--text-tertiary);">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="text-sm" style="color: var(--text-secondary);">載入對話失敗</p>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          style="background-color: var(--accent-primary); color: var(--bg-primary);"
+          @click="emit('retry-history')"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          重試
+        </button>
+        </div>
+
+        <section v-if="showWelcomeCard" class="chat-welcome-card" aria-label="首次使用引導">
         <div class="welcome-badge">歡迎使用 Server Assistant</div>
         <h2 class="welcome-title">先試試常用斜線指令</h2>
         <p class="welcome-description">
@@ -730,13 +818,29 @@ const toggleExpand = (messageKey) => {
             <p>{{ item.desc }}</p>
           </button>
         </div>
+        <div class="welcome-examples">
+          <div class="welcome-examples-header">
+            <p class="welcome-examples-label">或試試自然語言提問：</p>
+            <button type="button" class="welcome-examples-refresh" @click="refreshExamples" title="換一批範例">↻ 換一批</button>
+          </div>
+          <div class="welcome-examples-chips">
+            <button
+              v-for="ex in displayedExamples"
+              :key="ex"
+              type="button"
+              class="welcome-example-chip"
+              :disabled="quickStartDisabled"
+              @click="fillExamplePrompt(ex)"
+            >{{ ex }}</button>
+          </div>
+        </div>
         <p class="welcome-tip">
           也可以直接輸入自然語言，或使用 <code>!&lt;Linux 指令&gt;</code>（例如 <code>!docker ps</code>）。
         </p>
-      </section>
+        </section>
 
       <!-- Load earlier messages button -->
-      <div v-if="hasHiddenMessages" class="flex justify-center">
+        <div v-if="hasHiddenMessages" class="flex justify-center">
         <button type="button" @click="loadEarlierMessages"
                 :disabled="isLoadingMore"
                 class="px-4 py-1.5 text-xs font-medium rounded-full border transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
@@ -745,133 +849,68 @@ const toggleExpand = (messageKey) => {
           <template v-else-if="windowStart > 0">載入更早訊息（還有 {{ windowStart }} 則）</template>
           <template v-else>從資料庫載入更多訊息</template>
         </button>
-      </div>
-
-      <div v-if="isTouchDevice && visibleMessagesWithKeys.length > 0" class="message-mobile-hint">
-        長按訊息可快速「複製」或「引用」
-      </div>
-
-      <div v-for="entry in visibleMessagesWithKeys" :key="entry.messageKey"
-           :data-msg-key="entry.messageKey"
-           :class="['flex gap-3 items-start group', entry.msg.role === 'user' ? 'flex-row-reverse' : 'flex-row']">
-        <!-- Avatar -->
-        <div class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden select-none shadow-sm"
-             :class="entry.msg.role === 'user' ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'">
-          <span v-if="entry.msg.role === 'user'" class="text-xs font-bold text-white">U</span>
-          <span v-else class="text-xs font-bold text-white">AI</span>
         </div>
 
-        <!-- Message bubble -->
-        <div class="max-w-[85%] min-w-0 rounded-2xl p-4 shadow-sm transition-all duration-200"
-             @touchstart.passive="handleMessageTouchStart($event, entry.msg.content)"
-             @touchmove.passive="handleMessageTouchMove"
-             @touchend="handleMessageTouchEnd"
-             @touchcancel="handleMessageTouchEnd"
-             :style="entry.msg.role === 'user'
-               ? { backgroundColor: 'var(--user-bubble)', color: 'var(--text-primary)' }
-               : { backgroundColor: 'var(--ai-bubble)', border: '1px solid var(--border-primary)' }">
-          <div class="text-[11px] mb-1.5 flex justify-between items-center gap-4 font-medium tracking-wide"
-               style="color: var(--text-tertiary);">
-            <span>{{ entry.msg.role === 'user' ? 'User' : 'AI Assistant' }}</span>
-            <div class="message-inline-actions">
-              <button
-                v-if="shouldShowEditAction(entry)"
-                type="button"
-                class="message-inline-action-btn"
-                title="編輯訊息"
-                aria-label="編輯訊息"
-                @click="emit('edit-message', entry.absoluteIndex)"
-              >
-                編輯
-              </button>
-              <button
-                v-if="shouldShowRegenerateAction(entry)"
-                type="button"
-                class="message-inline-action-btn"
-                title="重新生成回覆"
-                aria-label="重新生成回覆"
-                @click="emit('regenerate-message', entry.absoluteIndex)"
-              >
-                重新生成
-              </button>
-            </div>
-          </div>
+        <div v-if="isTouchDevice && visibleMessagesWithKeys.length > 0" class="message-mobile-hint">
+        長按訊息可快速「複製」或「引用」
+        </div>
 
-          <!-- Message content -->
+      <!-- Virtual scroll container -->
+        <div v-if="visibleMessagesWithKeys.length > 0"
+             :style="{ height: `${totalVirtualSize}px`, width: '100%', position: 'relative' }">
           <div
-            class="message-content-shell"
-            :class="{ 'message-content-collapsed': shouldCollapseMessage(entry.msg) && !isExpanded(entry.messageKey) }"
-            :style="{ '--collapsed-lines': String(collapsedLines) }"
+            v-for="virtualRow in virtualItems"
+            :key="visibleMessagesWithKeys[virtualRow.index].messageKey"
+            :ref="measureElement"
+            :data-index="virtualRow.index"
+            class="virtual-message-row"
+            :style="{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              transform: `translateY(${virtualRow.start}px)`,
+            }"
           >
-            <div class="markdown-content leading-7 text-[15px]" style="color: var(--text-primary);" v-html="renderMarkdown(entry.msg.content)"></div>
-            <div v-if="shouldCollapseMessage(entry.msg) && !isExpanded(entry.messageKey)" class="message-fade-mask"></div>
-          </div>
-          <div v-if="shouldCollapseMessage(entry.msg)" class="mt-1">
-            <button
-              type="button"
-              class="message-expand-btn"
-              @click="toggleExpand(entry.messageKey)"
-            >
-              <svg
-                class="message-expand-icon"
-                :class="{ 'message-expand-icon-open': isExpanded(entry.messageKey) }"
-                viewBox="0 0 16 16" fill="currentColor"
-              >
-                <path d="M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z"/>
-              </svg>
-              <span>{{ isExpanded(entry.messageKey) ? '收合' : '展開完整輸出' }}</span>
-            </button>
-          </div>
-
-          <!-- Command confirmation card -->
-          <div v-if="entry.msg.command" class="mt-3">
-            <ChatCommandRequest
-              :command="entry.msg.command.content"
-              :status="entry.msg.command.status"
-              :disabled="Boolean(entry.msg.command.inFlight) || isProcessing"
-              :created-at="entry.msg.command.createdAt"
-              :resolved-at="entry.msg.command.resolvedAt"
-              :expires-at="entry.msg.command.timeoutAt"
-              :ttl-seconds="COMMAND_CONFIRM_TIMEOUT_SECONDS"
-              @confirm="emit('command-action', entry.msg, 'confirm')"
-              @cancel="emit('command-action', entry.msg, 'cancel')"
+            <MessageItem
+              :entry="visibleMessagesWithKeys[virtualRow.index]"
+              :is-processing="isProcessing"
+              :is-touch-device="isTouchDevice"
+              :can-regenerate-message="canRegenerateMessage"
+              :collapsed-lines="collapsedLines"
+              :is-expanded="isExpanded(visibleMessagesWithKeys[virtualRow.index].messageKey)"
+              :rendered-html="renderMarkdown(visibleMessagesWithKeys[virtualRow.index].msg.content)"
+              :should-collapse="shouldCollapseMessage(visibleMessagesWithKeys[virtualRow.index].msg)"
+              :available-models="availableModels"
+              @command-action="(msg, action) => emit('command-action', msg, action)"
+              @edit-message="(idx) => emit('edit-message', idx)"
+              @regenerate-message="(idx) => emit('regenerate-message', idx)"
+              @toggle-expand="toggleExpand"
+              @switch-model="handleSwitchModel"
+              @touch-start="handleMessageTouchStart"
+              @touch-move="handleMessageTouchMove"
+              @touch-end="handleMessageTouchEnd"
+              @copy="copyToClipboard"
             />
           </div>
+        </div>
 
-          <!-- User-aborted indicator -->
-          <div v-if="entry.msg.aborted" class="msg-aborted-banner">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-            已中斷回應
+      <!-- Typing Indicator: visible only while waiting for the first AI token -->
+        <div v-if="showTypingIndicator" class="flex gap-3 items-start">
+          <div class="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center overflow-hidden select-none shadow-sm">
+            <span class="text-xs font-bold text-white">AI</span>
+          </div>
+          <div class="rounded-2xl p-4 border flex items-center gap-2 shadow-sm"
+               style="background-color: var(--ai-bubble); border-color: var(--border-primary);">
+            <div class="flex items-center gap-1.5">
+              <div class="w-2 h-2 rounded-full animate-bounce" style="background-color: var(--text-tertiary);"></div>
+              <div class="w-2 h-2 rounded-full animate-bounce [animation-delay:75ms]" style="background-color: var(--text-tertiary);"></div>
+              <div class="w-2 h-2 rounded-full animate-bounce [animation-delay:150ms]" style="background-color: var(--text-tertiary);"></div>
+            </div>
+            <span class="text-xs" aria-live="polite" style="color: var(--text-tertiary);">{{ typingIndicatorText }}</span>
           </div>
         </div>
-
-        <!-- Copy Button -->
-        <button
-          v-if="!isTouchDevice"
-          @click="copyToClipboard(entry.msg.content, $event)"
-          class="mt-2 p-1.5 rounded-lg transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
-          style="color: var(--text-tertiary);"
-          title="複製內容"
-          aria-label="複製訊息內容"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Loading Indicator -->
-      <div v-if="isProcessing" class="flex gap-3 items-start">
-        <div class="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center overflow-hidden select-none shadow-sm">
-          <span class="text-xs font-bold text-white">AI</span>
-        </div>
-        <div class="rounded-2xl p-4 border flex items-center gap-1.5 shadow-sm"
-             style="background-color: var(--ai-bubble); border-color: var(--border-primary);">
-          <div class="w-2 h-2 rounded-full animate-bounce" style="background-color: var(--text-tertiary);"></div>
-          <div class="w-2 h-2 rounded-full animate-bounce [animation-delay:75ms]" style="background-color: var(--text-tertiary);"></div>
-          <div class="w-2 h-2 rounded-full animate-bounce [animation-delay:150ms]" style="background-color: var(--text-tertiary);"></div>
-        </div>
-      </div>
+      </template>
     </div>
 
     <Transition name="message-action-menu">
@@ -950,6 +989,14 @@ const toggleExpand = (messageKey) => {
 </template>
 
 <style>
+.virtual-message-row {
+  padding-bottom: 1.5rem; /* equivalent to space-y-6 gap */
+}
+
+.message-list-container > :not([style*="position: relative"]) + :not([style*="position: relative"]) {
+  margin-top: 1.5rem;
+}
+
 .chat-welcome-card {
   border: 1px solid var(--border-primary);
   border-radius: 1rem;
@@ -1061,6 +1108,67 @@ const toggleExpand = (messageKey) => {
   border-radius: 0.3rem;
   background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent);
   color: var(--text-secondary);
+}
+
+.welcome-examples {
+  margin-top: 0.8rem;
+}
+
+.welcome-examples-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+}
+
+.welcome-examples-label {
+  color: var(--text-tertiary);
+  font-size: 0.76rem;
+  margin-bottom: 0;
+}
+
+.welcome-examples-refresh {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.welcome-examples-refresh:hover {
+  color: var(--accent-primary);
+  background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+}
+
+.welcome-examples-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.welcome-example-chip {
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 25%, var(--border-primary));
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  background-color: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.welcome-example-chip:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
+  background-color: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+  color: var(--text-primary);
+}
+
+.welcome-example-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 900px) {
@@ -1506,6 +1614,78 @@ const toggleExpand = (messageKey) => {
   color: var(--text-tertiary);
   background-color: color-mix(in srgb, var(--text-tertiary) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--text-tertiary) 20%, transparent);
+  user-select: none;
+}
+
+/* Empty response retry button */
+.empty-response-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.empty-response-retry-btn:hover {
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.empty-response-retry-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Error action bar: wraps CTA buttons for error states */
+.error-action-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.error-action-bar .empty-response-retry-btn {
+  margin-top: 0;
+}
+
+/* Switch-model secondary button */
+.error-switch-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: color-mix(in srgb, var(--text-tertiary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-primary) 70%, transparent);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.error-switch-model-btn:hover {
+  background-color: color-mix(in srgb, var(--text-tertiary) 15%, transparent);
+  border-color: var(--border-primary);
+}
+
+/* Rate-limit countdown label */
+.error-countdown {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
   user-select: none;
 }
 

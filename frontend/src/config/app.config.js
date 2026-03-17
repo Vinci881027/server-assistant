@@ -6,9 +6,18 @@
 
 // Determine if running in development mode
 const isDevelopment = Boolean(import.meta.env?.DEV)
+const DEFAULT_APP_NAME = 'CGV Lab Server Assistant'
+const resolvedAppName = typeof import.meta.env?.VITE_APP_NAME === 'string'
+  ? import.meta.env.VITE_APP_NAME.trim()
+  : ''
 
 // API Base URL (handled by Vite proxy in dev mode, same path in production)
 export const API_BASE_URL = '/api'
+
+// Application Metadata
+export const APP_CONFIG = {
+  name: resolvedAppName || DEFAULT_APP_NAME,
+}
 
 // Feature Flags
 export const FEATURES = {
@@ -28,6 +37,8 @@ export const UI_CONFIG = {
   messageWindowSize: 80,
   messageWindowLoadChunk: 20,
   markdownMaxRenderLength: 20000,
+  virtualScrollOverscan: 5,
+  virtualScrollEstimateSize: 120,
 }
 
 // Chat Configuration
@@ -59,6 +70,7 @@ export const DEBUG = {
 }
 
 export default {
+  APP_CONFIG,
   API_BASE_URL,
   FEATURES,
   UI_CONFIG,

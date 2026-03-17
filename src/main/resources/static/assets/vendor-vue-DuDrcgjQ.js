@@ -1,3 +1,5 @@
+import { f as Virtualizer, h as observeElementRect, m as observeElementOffset, p as elementScroll } from "./vendor-DQFcYRvF.js";
+
 //#region node_modules/@vue/shared/dist/shared.esm-bundler.js
 /**
 * @vue/shared v3.5.27
@@ -1191,6 +1193,10 @@ function isRef(r) {
 function ref(value) {
 	return createRef(value, false);
 }
+/* @__NO_SIDE_EFFECTS__ */
+function shallowRef(value) {
+	return createRef(value, true);
+}
 function createRef(rawValue, shallow) {
 	if (/* @__PURE__ */ isRef(rawValue)) return rawValue;
 	return new RefImpl(rawValue, shallow);
@@ -1219,6 +1225,9 @@ var RefImpl = class {
 		}
 	}
 };
+function triggerRef(ref2) {
+	if (ref2.dep) ref2.dep.trigger();
+}
 function unref(ref2) {
 	return /* @__PURE__ */ isRef(ref2) ? ref2.value : ref2;
 }
@@ -1857,7 +1866,7 @@ function createPathGetter(ctx, path) {
 var TeleportEndKey = /* @__PURE__ */ Symbol("_vte");
 var isTeleport = (type) => type.__isTeleport;
 var leaveCbKey = /* @__PURE__ */ Symbol("_leaveCb");
-var enterCbKey = /* @__PURE__ */ Symbol("_enterCb");
+var enterCbKey$1 = /* @__PURE__ */ Symbol("_enterCb");
 function useTransitionState() {
 	const state = {
 		isMounted: false,
@@ -2002,20 +2011,20 @@ function resolveTransitionHooks(vnode, props, state, instance, postClone) {
 				cancelHook = onAppearCancelled || onEnterCancelled;
 			} else return;
 			let called = false;
-			const done = el[enterCbKey] = (cancelled) => {
+			const done = el[enterCbKey$1] = (cancelled) => {
 				if (called) return;
 				called = true;
 				if (cancelled) callHook$2(cancelHook, [el]);
 				else callHook$2(afterHook, [el]);
 				if (hooks.delayedLeave) hooks.delayedLeave();
-				el[enterCbKey] = void 0;
+				el[enterCbKey$1] = void 0;
 			};
 			if (hook) callAsyncHook(hook, [el, done]);
 			else done();
 		},
 		leave(el, remove$1) {
 			const key2 = String(vnode.key);
-			if (el[enterCbKey]) el[enterCbKey](true);
+			if (el[enterCbKey$1]) el[enterCbKey$1](true);
 			if (state.isUnmounting) return remove$1();
 			callHook$2(onBeforeLeave, [el]);
 			let called = false;
@@ -4910,6 +4919,115 @@ function shouldSetAsProp(el, key, value, isSVG) {
 	if (isNativeOn(key) && isString(value)) return false;
 	return key in el;
 }
+var positionMap = /* @__PURE__ */ new WeakMap();
+var newPositionMap = /* @__PURE__ */ new WeakMap();
+var moveCbKey = /* @__PURE__ */ Symbol("_moveCb");
+var enterCbKey = /* @__PURE__ */ Symbol("_enterCb");
+var decorate = (t) => {
+	delete t.props.mode;
+	return t;
+};
+var TransitionGroup = /* @__PURE__ */ decorate({
+	name: "TransitionGroup",
+	props: /* @__PURE__ */ extend({}, TransitionPropsValidators, {
+		tag: String,
+		moveClass: String
+	}),
+	setup(props, { slots }) {
+		const instance = getCurrentInstance();
+		const state = useTransitionState();
+		let prevChildren;
+		let children;
+		onUpdated(() => {
+			if (!prevChildren.length) return;
+			const moveClass = props.moveClass || `${props.name || "v"}-move`;
+			if (!hasCSSTransform(prevChildren[0].el, instance.vnode.el, moveClass)) {
+				prevChildren = [];
+				return;
+			}
+			prevChildren.forEach(callPendingCbs);
+			prevChildren.forEach(recordPosition);
+			const movedChildren = prevChildren.filter(applyTranslation);
+			forceReflow(instance.vnode.el);
+			movedChildren.forEach((c) => {
+				const el = c.el;
+				const style = el.style;
+				addTransitionClass(el, moveClass);
+				style.transform = style.webkitTransform = style.transitionDuration = "";
+				const cb = el[moveCbKey] = (e) => {
+					if (e && e.target !== el) return;
+					if (!e || e.propertyName.endsWith("transform")) {
+						el.removeEventListener("transitionend", cb);
+						el[moveCbKey] = null;
+						removeTransitionClass(el, moveClass);
+					}
+				};
+				el.addEventListener("transitionend", cb);
+			});
+			prevChildren = [];
+		});
+		return () => {
+			const rawProps = toRaw(props);
+			const cssTransitionProps = resolveTransitionProps(rawProps);
+			let tag = rawProps.tag || Fragment;
+			prevChildren = [];
+			if (children) for (let i = 0; i < children.length; i++) {
+				const child = children[i];
+				if (child.el && child.el instanceof Element) {
+					prevChildren.push(child);
+					setTransitionHooks(child, resolveTransitionHooks(child, cssTransitionProps, state, instance));
+					positionMap.set(child, {
+						left: child.el.offsetLeft,
+						top: child.el.offsetTop
+					});
+				}
+			}
+			children = slots.default ? getTransitionRawChildren(slots.default()) : [];
+			for (let i = 0; i < children.length; i++) {
+				const child = children[i];
+				if (child.key != null) setTransitionHooks(child, resolveTransitionHooks(child, cssTransitionProps, state, instance));
+			}
+			return createVNode(tag, null, children);
+		};
+	}
+});
+function callPendingCbs(c) {
+	const el = c.el;
+	if (el[moveCbKey]) el[moveCbKey]();
+	if (el[enterCbKey]) el[enterCbKey]();
+}
+function recordPosition(c) {
+	newPositionMap.set(c, {
+		left: c.el.offsetLeft,
+		top: c.el.offsetTop
+	});
+}
+function applyTranslation(c) {
+	const oldPos = positionMap.get(c);
+	const newPos = newPositionMap.get(c);
+	const dx = oldPos.left - newPos.left;
+	const dy = oldPos.top - newPos.top;
+	if (dx || dy) {
+		const s = c.el.style;
+		s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`;
+		s.transitionDuration = "0s";
+		return c;
+	}
+}
+function hasCSSTransform(el, root, moveClass) {
+	const clone = el.cloneNode();
+	const _vtc = el[vtcKey];
+	if (_vtc) _vtc.forEach((cls) => {
+		cls.split(/\s+/).forEach((c) => c && clone.classList.remove(c));
+	});
+	moveClass.split(/\s+/).forEach((c) => c && clone.classList.add(c));
+	clone.style.display = "none";
+	const container = root.nodeType === 1 ? root : root.parentNode;
+	container.appendChild(clone);
+	const { hasTransform } = getTransitionInfo(clone);
+	container.removeChild(clone);
+	return hasTransform;
+}
 var getModelAssigner = (vnode) => {
 	const fn = vnode.props["onUpdate:modelValue"] || false;
 	return isArray(fn) ? (value) => invokeArrayFns(fn, value) : fn;
@@ -5643,4 +5761,37 @@ function storeToRefs(store) {
 }
 
 //#endregion
-export { resolveDynamicComponent as A, nextTick as C, openBlock as D, onUnmounted as E, ref as F, unref as I, normalizeClass as L, watch as M, withCtx as N, renderList as O, withDirectives as P, normalizeStyle as R, mergeModels as S, onMounted as T, createElementBlock as _, createApp as a, createVNode as b, vModelSelect as c, withModifiers as d, Fragment as f, createCommentVNode as g, createBlock as h, Transition as i, useModel as j, renderSlot as k, vModelText as l, createBaseVNode as m, defineStore as n, vModelCheckbox as o, computed as p, storeToRefs as r, vModelDynamic as s, createPinia as t, withKeys as u, createStaticVNode as v, onBeforeUnmount as w, defineAsyncComponent as x, createTextVNode as y, toDisplayString as z };
+//#region node_modules/@tanstack/vue-virtual/dist/esm/index.js
+function useVirtualizerBase(options) {
+	const virtualizer = new Virtualizer(unref(options));
+	const state = shallowRef(virtualizer);
+	const cleanup = virtualizer._didMount();
+	watch(() => unref(options).getScrollElement(), (el) => {
+		if (el) virtualizer._willUpdate();
+	}, { immediate: true });
+	watch(() => unref(options), (options2) => {
+		virtualizer.setOptions({
+			...options2,
+			onChange: (instance, sync) => {
+				var _a;
+				triggerRef(state);
+				(_a = options2.onChange) == null || _a.call(options2, instance, sync);
+			}
+		});
+		virtualizer._willUpdate();
+		triggerRef(state);
+	}, { immediate: true });
+	onScopeDispose(cleanup);
+	return state;
+}
+function useVirtualizer(options) {
+	return useVirtualizerBase(computed(() => ({
+		observeElementRect,
+		observeElementOffset,
+		scrollToFn: elementScroll,
+		...unref(options)
+	})));
+}
+
+//#endregion
+export { renderSlot as A, toDisplayString as B, mergeModels as C, onUnmounted as D, onMounted as E, withDirectives as F, ref as I, unref as L, useModel as M, watch as N, openBlock as O, withCtx as P, normalizeClass as R, defineAsyncComponent as S, onBeforeUnmount as T, createCommentVNode as _, Transition as a, createTextVNode as b, vModelCheckbox as c, withKeys as d, withModifiers as f, createBlock as g, createBaseVNode as h, storeToRefs as i, resolveDynamicComponent as j, renderList as k, vModelDynamic as l, computed as m, createPinia as n, TransitionGroup as o, Fragment as p, defineStore as r, createApp as s, useVirtualizer as t, vModelText as u, createElementBlock as v, nextTick as w, createVNode as x, createStaticVNode as y, normalizeStyle as z };

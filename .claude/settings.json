@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls mvnw*)",
+      "Bash(wc -l /home/vinci/server-assistant/src/test/java/com/linux/ai/serverassistant/**/*.java)",
+      "Bash(wc -l /home/vinci/server-assistant/src/main/java/com/linux/ai/serverassistant/**/*.java)",
+      "Bash(npm test:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

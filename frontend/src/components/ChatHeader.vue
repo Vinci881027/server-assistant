@@ -1,4 +1,5 @@
 <script setup>
+import { APP_CONFIG } from '../config/app.config'
 import { useThemeStore } from '../stores/themeStore'
 
 const themeStore = useThemeStore()
@@ -22,6 +23,7 @@ defineEmits(['toggle-sidebar']);
     <div class="flex items-center gap-2">
       <button @click="$emit('toggle-sidebar')" class="header-sidebar-toggle mr-1 p-2 rounded-lg transition-colors"
               style="color: var(--text-secondary);"
+              title="切換側邊欄"
               aria-label="切換側邊欄">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -29,7 +31,7 @@ defineEmits(['toggle-sidebar']);
       </button>
 
       <h1 class="text-lg font-semibold tracking-tight" style="color: var(--text-primary);">
-        CGV Lab Server Assistant
+        {{ APP_CONFIG.name }}
       </h1>
 
       <slot name="model-name"></slot>
@@ -44,7 +46,7 @@ defineEmits(['toggle-sidebar']);
             <span v-if="isOnline" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
             <span class="relative inline-flex rounded-full h-2 w-2" :class="isOnline ? 'bg-green-500' : 'bg-red-500'"></span>
           </span>
-          <span class="text-[10px] uppercase font-bold tracking-widest" style="color: var(--text-tertiary);">{{ isOnline ? 'Online' : 'Offline' }}</span>
+          <span class="text-[10px] uppercase font-bold tracking-widest" style="color: var(--text-tertiary);">{{ isOnline ? '連線中' : '離線' }}</span>
         </div>
 
         <div class="w-px h-3" style="background-color: var(--border-primary);"></div>

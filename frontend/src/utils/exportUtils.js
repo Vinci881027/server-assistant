@@ -1,7 +1,10 @@
 function normalizeFilenamePart(rawValue, fallback) {
   const raw = typeof rawValue === 'string' ? rawValue.trim() : '';
-  const cleaned = raw
-    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-')
+  const withoutIllegalPathChars = raw.replace(/[\\/:*?"<>|]/g, '-');
+  const withoutControlChars = Array.from(withoutIllegalPathChars, (char) => (
+    char.charCodeAt(0) < 32 ? '-' : char
+  )).join('');
+  const cleaned = withoutControlChars
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');

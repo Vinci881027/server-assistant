@@ -1,5 +1,6 @@
 package com.linux.ai.serverassistant.config;
 
+import com.linux.ai.serverassistant.service.ai.ToolStatusBus;
 import com.linux.ai.serverassistant.service.command.CommandExecutionService;
 import com.linux.ai.serverassistant.service.file.FileOperationService;
 import com.linux.ai.serverassistant.service.user.UserManagementService;
@@ -27,10 +28,12 @@ public class AiToolsConfig {
     private static final Set<String> DEBUG_COMMAND_ALLOWLIST = Set.of(
             "ls", "pwd", "whoami", "id", "date", "uptime", "uname");
     private final UserContext userContext;
+    private final ToolStatusBus toolStatusBus;
 
     @Autowired
-    public AiToolsConfig(UserContext userContext) {
+    public AiToolsConfig(UserContext userContext, ToolStatusBus toolStatusBus) {
         this.userContext = userContext;
+        this.toolStatusBus = toolStatusBus;
     }
 
     @Bean
@@ -43,12 +46,17 @@ public class AiToolsConfig {
                 actor -> {
                     log.debug("executeLinuxCommand TOOL CALLED: cmd='{}', confirm={}",
                             maskCommandForDebug(request.command()), request.confirm());
-                    return service.execute(
-                            request.command(),
-                            ExecutionOptions.builder()
-                                    .confirm(Boolean.TRUE.equals(request.confirm()))
-                                    .user(actor)
-                                    .build());
+                    toolStatusBus.emitToolCall(request.contextKey(), "cmd", request.command());
+                    try {
+                        return service.execute(
+                                request.command(),
+                                ExecutionOptions.builder()
+                                        .confirm(Boolean.TRUE.equals(request.confirm()))
+                                        .user(actor)
+                                        .build());
+                    } finally {
+                        toolStatusBus.emitToolDone(request.contextKey());
+                    }
                 });
     }
 
@@ -60,7 +68,14 @@ public class AiToolsConfig {
                 request,
                 r -> r.path() != null && !r.path().isBlank(),
                 "path 不能為空。",
-                actor -> fileOperationService.listDirectory(request.path(), actor));
+                actor -> {
+                    toolStatusBus.emitToolCall(request.contextKey(), "ls", request.path());
+                    try {
+                        return fileOperationService.listDirectory(request.path(), actor);
+                    } finally {
+                        toolStatusBus.emitToolDone(request.contextKey());
+                    }
+                });
     }
 
     @Bean
@@ -70,7 +85,14 @@ public class AiToolsConfig {
                 request,
                 r -> r.path() != null && !r.path().isBlank(),
                 "path 不能為空。",
-                actor -> fileOperationService.readFileContent(request.path(), actor));
+                actor -> {
+                    toolStatusBus.emitToolCall(request.contextKey(), "read", request.path());
+                    try {
+                        return fileOperationService.readFileContent(request.path(), actor);
+                    } finally {
+                        toolStatusBus.emitToolDone(request.contextKey());
+                    }
+                });
     }
 
     @Bean
@@ -80,7 +102,14 @@ public class AiToolsConfig {
                 request,
                 r -> r.path() != null && !r.path().isBlank(),
                 "path 不能為空。",
-                actor -> fileOperationService.createDirectory(request.path(), actor));
+                actor -> {
+                    toolStatusBus.emitToolCall(request.contextKey(), "mkdir", request.path());
+                    try {
+                        return fileOperationService.createDirectory(request.path(), actor);
+                    } finally {
+                        toolStatusBus.emitToolDone(request.contextKey());
+                    }
+                });
     }
 
     @Bean
@@ -94,7 +123,14 @@ public class AiToolsConfig {
                     request,
                     r -> r.path() != null && !r.path().isBlank(),
                     "path 不能為空。",
-                    actor -> fileOperationService.writeFileContent(request.path(), request.content(), actor));
+                    actor -> {
+                        toolStatusBus.emitToolCall(request.contextKey(), "write", request.path());
+                        try {
+                            return fileOperationService.writeFileContent(request.path(), request.content(), actor);
+                        } finally {
+                            toolStatusBus.emitToolDone(request.contextKey());
+                        }
+                    });
         };
     }
 
@@ -117,12 +153,17 @@ public class AiToolsConfig {
                                     return CommandMarkers.toolSecurityViolation("權限不足：manageUsers list/add/delete 僅限管理員。");
                                 }
                             }
-                            return userManagementService.manageUsers(
-                                    action,
-                                    request.username(),
-                                    password,
-                                    Boolean.TRUE.equals(request.confirm()),
-                                    actor);
+                            toolStatusBus.emitToolCall(request.contextKey(), "users", action);
+                            try {
+                                return userManagementService.manageUsers(
+                                        action,
+                                        request.username(),
+                                        password,
+                                        Boolean.TRUE.equals(request.confirm()),
+                                        actor);
+                            } finally {
+                                toolStatusBus.emitToolDone(request.contextKey());
+                            }
                         });
             } finally {
                 clearSensitivePassword(password);
@@ -156,12 +197,17 @@ public class AiToolsConfig {
                             return CommandMarkers.toolSecurityViolation("權限不足：非管理員只能查看自己的 SSH keys。");
                         }
                     }
-                    return userManagementService.manageSshKeys(
-                            action,
-                            request.username(),
-                            request.publicKey(),
-                            Boolean.TRUE.equals(request.confirm()),
-                            actor);
+                    toolStatusBus.emitToolCall(request.contextKey(), "ssh", action);
+                    try {
+                        return userManagementService.manageSshKeys(
+                                action,
+                                request.username(),
+                                request.publicKey(),
+                                Boolean.TRUE.equals(request.confirm()),
+                                actor);
+                    } finally {
+                        toolStatusBus.emitToolDone(request.contextKey());
+                    }
                 });
     }
 

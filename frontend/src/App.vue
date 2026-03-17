@@ -2,10 +2,9 @@
 import { onMounted, onBeforeUnmount, watch, defineAsyncComponent, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import Login from './components/Login.vue'
-import ModelSwitchToast from './components/ModelSwitchToast.vue'
 import NetworkOfflineBanner from './components/NetworkOfflineBanner.vue'
 import ShortcutHelpDialog from './components/ShortcutHelpDialog.vue'
-import UndoDeleteToast from './components/UndoDeleteToast.vue'
+import ToastContainer from './components/ToastContainer.vue'
 import ChatInterfaceLayout from './components/ChatInterfaceLayout.vue'
 
 // Lazy load AdminDashboard (only for admin users)
@@ -25,6 +24,7 @@ import { useNetworkStatus } from './composables/useNetworkStatus'
 import { useSwipeGesture } from './composables/useSwipeGesture'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 import { useModelSwitchToast } from './composables/useModelSwitchToast'
+import { useToastQueue } from './composables/useToastQueue'
 import { useCommandConfirmation } from './composables/useCommandConfirmation'
 import { useConversationExport } from './composables/useConversationExport'
 import { useConversationDeletion } from './composables/useConversationDeletion'
@@ -47,10 +47,11 @@ const {
   displayModelName,
   hasMoreHistory,
   isHistoryLoading,
+  historyLoadFailed,
   isLoadingMore,
   hasPendingHistoryReload,
 } = storeToRefs(chatStore)
-const { conversations, currentConversationId, isSidebarOpen } = storeToRefs(conversationStore)
+const { conversations, currentConversationId, isSidebarOpen, isConversationsLoading } = storeToRefs(conversationStore)
 const { serverIp, availableModels, showAdmin, statusMessage } = storeToRefs(systemStore)
 
 // ========== Local State ==========
@@ -59,7 +60,7 @@ const chatInterfaceRef = ref(null)
 let bootstrapPromise = null
 
 // ========== Initialize Composables ==========
-const { sendMessage, stopStreaming, retryNow, isRetrying, retryCountdown } = useChat()
+const { sendMessage, stopStreaming, retryNow, isRetrying, retryCountdown, toolCallStatus } = useChat()
 
 const {
   isBackendOnline,
@@ -82,12 +83,12 @@ const {
 } = useSwipeGesture()
 
 const {
-  showModelSwitchToast,
-  modelSwitchToastMessage,
   suppressNextModelSwitchToast,
   hideModelSwitchToast,
   triggerModelSwitchToast,
 } = useModelSwitchToast()
+
+const { toasts, handleAction: handleToastAction, dismissAll: dismissAllToasts } = useToastQueue()
 
 const {
   isShortcutHelpOpen,
@@ -109,9 +110,7 @@ const {
 const { handleExportChat } = useConversationExport()
 
 const {
-  pendingDelete,
   handleDeleteChat,
-  handleUndoDelete,
   clearPendingDelete,
 } = useConversationDeletion()
 
@@ -122,12 +121,18 @@ const {
   handleRegenerateMessage,
 } = useMessageEditing({ sendMessage })
 
+function handleRetryHistory() {
+  const id = currentConversationId.value
+  if (id) chatStore.loadHistory(id)
+}
+
 // ========== Workspace Lifecycle ==========
 
 function resetWorkspaceState() {
   resetPollTokens()
   clearAllCommandTimeouts()
   hideModelSwitchToast()
+  dismissAllToasts()
   clearPendingDelete()
   systemStore.clearStatusMessage()
   chatStore.clearMessages()
@@ -330,7 +335,7 @@ watch(model, (nextModel, previousModel) => {
   }
 
   const label = resolveModelLabel(availableModels.value, nextModel)
-  triggerModelSwitchToast(`已切換至 ${label}`)
+  triggerModelSwitchToast(`接下來的訊息將使用 ${label}，此前訊息不受影響`)
 })
 
 watch(
@@ -372,7 +377,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="h-screen flex flex-col" style="background-color: var(--bg-primary);">
-    <ModelSwitchToast :show="showModelSwitchToast" :message="modelSwitchToastMessage" />
+    <ToastContainer :toasts="toasts" @action="handleToastAction" />
 
     <NetworkOfflineBanner :show="isLoggedIn && !isBrowserOnline" />
 
@@ -381,10 +386,7 @@ onBeforeUnmount(() => {
       @close="isShortcutHelpOpen = false"
     />
 
-    <UndoDeleteToast
-      :pendingDelete="pendingDelete"
-      @undo="handleUndoDelete"
-    />
+
 
     <!-- Initial auth check loading state -->
     <div v-if="isInitializing" class="flex-1 flex items-center justify-center" style="background-color: var(--bg-primary);">
@@ -413,6 +415,7 @@ onBeforeUnmount(() => {
       ref="chatInterfaceRef"
       :isMobileViewport="isMobileViewport"
       :isSidebarOpen="isSidebarOpen"
+      :isConversationsLoading="isConversationsLoading"
       :conversations="conversations"
       :currentConversationId="currentConversationId"
       :serverIp="serverIp"
@@ -427,12 +430,14 @@ onBeforeUnmount(() => {
       :availableModels="availableModels"
       :statusMessage="statusMessage"
       :isRetrying="isRetrying"
+      :toolCallStatus="toolCallStatus"
       :retryCountdown="retryCountdown"
       :onRetry="retryNow"
       :onCancelRetry="stopStreaming"
       :canRegenerateMessage="canRegenerateMessage"
       :hasMoreFromServer="hasMoreHistory"
       :isHistoryLoading="isHistoryLoading"
+      :historyLoadFailed="historyLoadFailed"
       :isLoadingMore="isLoadingMore"
       @touchstart="handleLayoutTouchStart"
       @touchmove="handleLayoutTouchMove"
@@ -454,6 +459,7 @@ onBeforeUnmount(() => {
       @edit-message="handleEditMessage"
       @regenerate-message="handleRegenerateMessage"
       @load-more="handleLoadMore"
+      @retry-history="handleRetryHistory"
     />
   </div>
 </template>

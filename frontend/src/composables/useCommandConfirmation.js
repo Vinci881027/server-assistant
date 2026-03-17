@@ -5,14 +5,20 @@ import { useSystemStore } from '../stores/systemStore'
 import httpClient from '../api/httpClient'
 import { COMMAND_CONFIRM_TIMEOUT_SECONDS } from '../config/app.config'
 import { extractOffloadJobMarker, extractBgJobMarker } from '../utils/commandMarkers'
+import { useToastQueue } from './useToastQueue'
 
 const COMMAND_CONFIRM_TIMEOUT_MS = COMMAND_CONFIRM_TIMEOUT_SECONDS * 1000
 const COMMAND_TIMEOUT_MESSAGE = '已逾時，指令已取消'
+const COMMAND_TIMEOUT_TOAST_MESSAGE = '⚠️ 指令確認逾時，已自動取消'
+const OFFLOAD_POLL_FAILURE_TOAST_MESSAGE = '❌ Offload 進度查詢失敗，請稍後再試'
+const COMMAND_JOB_POLL_FAILURE_TOAST_MESSAGE = '❌ 背景命令進度查詢失敗，請稍後再試'
+const POLL_FAILURE_TOAST_DURATION_MS = 4500
 
 export function useCommandConfirmation() {
   const chatStore = useChatStore()
   const conversationStore = useConversationStore()
   const systemStore = useSystemStore()
+  const { info: showInfoToast } = useToastQueue()
 
   const { messages, isProcessing } = storeToRefs(chatStore)
   const { currentConversationId } = storeToRefs(conversationStore)
@@ -45,16 +51,28 @@ export function useCommandConfirmation() {
     commandJobPollToken++
   }
 
+  function markCommandAsPending(msg, { resetCreatedAt = false } = {}) {
+    if (!msg?.command) return
+    msg.command.status = 'pending'
+    if (resetCreatedAt) {
+      msg.command.createdAt = Date.now()
+    }
+    delete msg.command.resolvedAt
+    msg.command.timeoutAt = Date.now() + COMMAND_CONFIRM_TIMEOUT_MS
+    msg.command.conversationId = currentConversationId.value || null
+  }
+
   async function autoCancelTimedOutCommand(msg) {
     if (!msg?.command || msg.command.status !== 'pending' || msg.command.inFlight) return
 
     const timeoutConversationId = msg.command.conversationId ?? null
-    msg.command.status = 'cancelled'
+    msg.command.status = 'expired'
     msg.command.resolvedAt = Date.now()
     delete msg.command.timeoutAt
     delete msg.command.conversationId
     clearCommandTimeout(msg)
     messages.value.push({ role: 'ai', content: COMMAND_TIMEOUT_MESSAGE })
+    showInfoToast(COMMAND_TIMEOUT_TOAST_MESSAGE)
 
     try {
       await httpClient.post('/ai/cancel-command', {
@@ -126,6 +144,7 @@ export function useCommandConfirmation() {
     } catch (e) {
       if (pollToken === offloadPollToken) {
         aiMsg.content = '❌ Offload 進度查詢失敗: ' + (e.message || '未知錯誤')
+        showPollFailureToast(OFFLOAD_POLL_FAILURE_TOAST_MESSAGE, e)
       }
     } finally {
       if (pollToken === offloadPollToken) {
@@ -155,6 +174,7 @@ export function useCommandConfirmation() {
     } catch (e) {
       if (pollToken === commandJobPollToken) {
         aiMsg.content = '❌ 背景命令進度查詢失敗: ' + (e.message || '未知錯誤')
+        showPollFailureToast(COMMAND_JOB_POLL_FAILURE_TOAST_MESSAGE, e)
       }
     } finally {
       if (pollToken === commandJobPollToken) {
@@ -163,12 +183,31 @@ export function useCommandConfirmation() {
     }
   }
 
+  function showPollFailureToast(baseMessage, error) {
+    if (typeof baseMessage !== 'string' || !baseMessage.trim()) return
+    const reason = typeof error?.message === 'string' ? error.message.trim() : ''
+    if (reason) {
+      showInfoToast(`${baseMessage}（${reason}）`, POLL_FAILURE_TOAST_DURATION_MS)
+      return
+    }
+    showInfoToast(baseMessage, POLL_FAILURE_TOAST_DURATION_MS)
+  }
+
   /**
    * Handle command action (confirm/cancel)
    * Confirmation calls the backend directly to bypass AI model unreliability.
    */
   async function handleCommandAction(msg, action) {
-    if (!msg.command || msg.command.status !== 'pending') return
+    if (!msg?.command) return
+    if (action === 'resend') {
+      if (msg.command.status !== 'expired') return
+      if (isProcessing.value || msg.command.inFlight) return
+      markCommandAsPending(msg, { resetCreatedAt: true })
+      schedulePendingCommandTimeout(msg, { resetDeadline: true })
+      return
+    }
+
+    if (msg.command.status !== 'pending') return
     if (isProcessing.value || msg.command.inFlight) return
 
     clearCommandTimeout(msg)
@@ -176,6 +215,7 @@ export function useCommandConfirmation() {
 
     if (action === 'confirm') {
       isProcessing.value = true
+      msg.command.status = 'executing'
       messages.value.push({ role: 'ai', content: '' })
       const aiMsg = messages.value[messages.value.length - 1]
       try {
@@ -209,16 +249,14 @@ export function useCommandConfirmation() {
           aiMsg.content = backendMessage
         }
       } catch (e) {
-        msg.command.status = 'pending'
-        delete msg.command.resolvedAt
-        msg.command.timeoutAt = Date.now() + COMMAND_CONFIRM_TIMEOUT_MS
+        msg.command.status = 'failed'
+        msg.command.resolvedAt = Date.now()
+        delete msg.command.timeoutAt
+        delete msg.command.conversationId
         aiMsg.content = '❌ 執行失敗: ' + (e.message || '未知錯誤')
       } finally {
         isProcessing.value = false
         msg.command.inFlight = false
-        if (msg.command.status === 'pending') {
-          schedulePendingCommandTimeout(msg)
-        }
       }
     } else {
       // Call backend directly instead of going through AI.
@@ -235,9 +273,7 @@ export function useCommandConfirmation() {
         delete msg.command.timeoutAt
         delete msg.command.conversationId
       } catch (e) {
-        msg.command.status = 'pending'
-        delete msg.command.resolvedAt
-        msg.command.timeoutAt = Date.now() + COMMAND_CONFIRM_TIMEOUT_MS
+        markCommandAsPending(msg)
         console.error('取消指令失敗:', e)
       } finally {
         isProcessing.value = false

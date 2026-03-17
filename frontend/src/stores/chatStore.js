@@ -7,6 +7,7 @@ import { DEFAULTS } from '../constants/index.js'
 import { hydrateMessageWithCommand } from '../utils/commandMarkers.js'
 
 const MODEL_PREFERENCE_STORAGE_KEY = 'server-assistant:model-preference'
+const DRAFT_STORAGE_KEY_PREFIX = 'draft_'
 
 function readSavedModelPreference() {
   if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
@@ -36,6 +37,61 @@ function persistModelPreference(modelKey) {
   } catch {
     // Ignore localStorage failures (e.g., privacy mode restrictions).
   }
+}
+
+function readSavedDraft(conversationKey) {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return ''
+  }
+
+  try {
+    const saved = window.localStorage.getItem(getDraftStorageKey(conversationKey))
+    return typeof saved === 'string' ? saved : ''
+  } catch {
+    return ''
+  }
+}
+
+function persistDraft(conversationKey, value) {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return
+  }
+
+  try {
+    if (value) {
+      window.localStorage.setItem(getDraftStorageKey(conversationKey), value)
+      return
+    }
+    window.localStorage.removeItem(getDraftStorageKey(conversationKey))
+  } catch {
+    // Ignore localStorage failures (e.g., privacy mode restrictions).
+  }
+}
+
+function clearPersistedDrafts() {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return
+  }
+
+  try {
+    const keysToRemove = []
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const storageKey = window.localStorage.key(index)
+      if (typeof storageKey === 'string' && storageKey.startsWith(DRAFT_STORAGE_KEY_PREFIX)) {
+        keysToRemove.push(storageKey)
+      }
+    }
+
+    for (const storageKey of keysToRemove) {
+      window.localStorage.removeItem(storageKey)
+    }
+  } catch {
+    // Ignore localStorage failures (e.g., privacy mode restrictions).
+  }
+}
+
+function getDraftStorageKey(conversationKey) {
+  return `${DRAFT_STORAGE_KEY_PREFIX}${conversationKey}`
 }
 
 /**
@@ -74,6 +130,7 @@ export const useChatStore = defineStore('chat', () => {
   const historyCursorCreatedAt = ref(null)
   const historyCursorId = ref(null)
   const pendingHistoryReloadConversationId = ref('')
+  const historyLoadFailed = ref(false)
 
   // ========== Computed ==========
   const displayModelName = computed(() => {
@@ -92,6 +149,7 @@ export const useChatStore = defineStore('chat', () => {
     hasMoreHistory.value = false
     isHistoryLoading.value = false
     isLoadingMore.value = false
+    historyLoadFailed.value = false
     totalHistory.value = 0
     loadedHistoryCount.value = 0
     historyCursorCreatedAt.value = null
@@ -108,6 +166,7 @@ export const useChatStore = defineStore('chat', () => {
     if (!conversationId) return false
 
     isHistoryLoading.value = true
+    historyLoadFailed.value = false
     messages.value = []
     hasMoreHistory.value = false
     totalHistory.value = 0
@@ -130,9 +189,11 @@ export const useChatStore = defineStore('chat', () => {
         hasMoreHistory.value = hasRemainingHistory()
         return true
       }
+      historyLoadFailed.value = true
       return false
     } catch (error) {
       console.error('Load history error:', error)
+      historyLoadFailed.value = true
       if (shouldRetryHistoryWhenOnline(error)) {
         pendingHistoryReloadConversationId.value = conversationId
       }
@@ -227,7 +288,9 @@ export const useChatStore = defineStore('chat', () => {
    * @param {string} conversationId - Conversation ID
    */
   function setActiveDraftConversation(conversationId) {
-    activeDraftConversationId.value = normalizeDraftConversationKey(conversationId)
+    const conversationKey = normalizeDraftConversationKey(conversationId)
+    activeDraftConversationId.value = conversationKey
+    hydrateDraftForKey(conversationKey)
   }
 
   /**
@@ -237,6 +300,7 @@ export const useChatStore = defineStore('chat', () => {
    */
   function getConversationDraft(conversationId) {
     const key = normalizeDraftConversationKey(conversationId)
+    hydrateDraftForKey(key)
     return draftByConversationId.value[key] ?? ''
   }
 
@@ -269,22 +333,27 @@ export const useChatStore = defineStore('chat', () => {
     const targetKey = normalizeDraftConversationKey(targetConversationId)
     if (sourceKey === targetKey) return
 
+    hydrateDraftForKey(sourceKey)
     const sourceDraft = draftByConversationId.value[sourceKey]
     if (typeof sourceDraft !== 'string') return
 
     const nextDrafts = { ...draftByConversationId.value }
     if (sourceDraft.length > 0) {
       nextDrafts[targetKey] = sourceDraft
+      persistDraft(targetKey, sourceDraft)
     } else {
       delete nextDrafts[targetKey]
+      persistDraft(targetKey, '')
     }
     delete nextDrafts[sourceKey]
+    persistDraft(sourceKey, '')
     draftByConversationId.value = nextDrafts
   }
 
   function clearAllDrafts() {
     draftByConversationId.value = {}
     activeDraftConversationId.value = NEW_CONVERSATION_DRAFT_KEY
+    clearPersistedDrafts()
   }
 
   function hasValidCursor() {
@@ -338,6 +407,7 @@ export const useChatStore = defineStore('chat', () => {
     const currentValue = draftByConversationId.value[conversationKey]
 
     if (!normalizedValue) {
+      persistDraft(conversationKey, '')
       if (typeof currentValue !== 'string') return
       const nextDrafts = { ...draftByConversationId.value }
       delete nextDrafts[conversationKey]
@@ -349,6 +419,17 @@ export const useChatStore = defineStore('chat', () => {
     draftByConversationId.value = {
       ...draftByConversationId.value,
       [conversationKey]: normalizedValue,
+    }
+    persistDraft(conversationKey, normalizedValue)
+  }
+
+  function hydrateDraftForKey(conversationKey) {
+    if (typeof draftByConversationId.value[conversationKey] === 'string') return
+    const savedDraft = readSavedDraft(conversationKey)
+    if (!savedDraft) return
+    draftByConversationId.value = {
+      ...draftByConversationId.value,
+      [conversationKey]: savedDraft,
     }
   }
 
@@ -367,6 +448,7 @@ export const useChatStore = defineStore('chat', () => {
     hasMoreHistory,
     isHistoryLoading,
     isLoadingMore,
+    historyLoadFailed,
     totalHistory,
     pendingHistoryReloadConversationId,
     hasPendingHistoryReload,

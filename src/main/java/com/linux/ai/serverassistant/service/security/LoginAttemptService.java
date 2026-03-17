@@ -255,7 +255,7 @@ public class LoginAttemptService {
             return LoginThrottleStatus.blocked(toRetrySeconds(lockDurationMs));
         }
 
-        return LoginThrottleStatus.allowed();
+        return LoginThrottleStatus.allowed(threshold - state.failureCount);
     }
 
     private void ensureCapacity(Map<String, AttemptState> attempts, int maxTrackedEntries, long now) {
@@ -313,7 +313,7 @@ public class LoginAttemptService {
         }
         if (left.blocked()) return left;
         if (right.blocked()) return right;
-        return LoginThrottleStatus.allowed();
+        return LoginThrottleStatus.allowed(Math.min(left.remainingAttempts(), right.remainingAttempts()));
     }
 
     private String normalizeUsername(String username) {
@@ -438,13 +438,17 @@ public class LoginAttemptService {
         }
     }
 
-    public record LoginThrottleStatus(boolean blocked, long retryAfterSeconds) {
+    public record LoginThrottleStatus(boolean blocked, long retryAfterSeconds, int remainingAttempts) {
         public static LoginThrottleStatus allowed() {
-            return new LoginThrottleStatus(false, 0);
+            return new LoginThrottleStatus(false, 0, Integer.MAX_VALUE);
+        }
+
+        public static LoginThrottleStatus allowed(int remainingAttempts) {
+            return new LoginThrottleStatus(false, 0, remainingAttempts);
         }
 
         public static LoginThrottleStatus blocked(long retryAfterSeconds) {
-            return new LoginThrottleStatus(true, Math.max(1, retryAfterSeconds));
+            return new LoginThrottleStatus(true, Math.max(1, retryAfterSeconds), 0);
         }
     }
 }
