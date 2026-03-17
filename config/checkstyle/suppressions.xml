@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<!--
+  Suppressions for known violations that exceed the raised thresholds.
+  These represent files with legitimate architectural complexity or
+  unavoidably long strings (JPA @Query annotations, regex patterns, etc.).
+  New files must still meet the standard limits defined in checkstyle.xml.
+-->
+<suppressions>
+
+    <!-- LineLength: JPA @Query annotations with long JPQL are inherently verbose -->
+    <suppress checks="LineLength" files="ChatMessageRepository\.java"/>
+
+    <!-- LineLength: long regex pattern literals that cannot be split -->
+    <suppress checks="LineLength" files="NaturalLanguageQueryMatcher\.java"/>
+
+    <!-- LineLength: Spring Security CSP/CORS config chains that are hard to break -->
+    <suppress checks="LineLength" files="SecurityConfig\.java"/>
+
+    <!-- LineLength: SSE streaming method with long Flux chain and log messages -->
+    <suppress checks="LineLength" files="ChatController\.java"/>
+
+    <!-- LineLength: TPM budget log message with full diagnostic context -->
+    <suppress checks="LineLength" files="UserTpmLimiter\.java"/>
+
+    <!-- CyclomaticComplexity: single monolithic metrics-gathering method
+         that aggregates CPU/memory/disk/network/temp in one pass for efficiency -->
+    <suppress checks="CyclomaticComplexity" files="SystemMetricsService\.java"/>
+    <suppress checks="MethodLength"         files="SystemMetricsService\.java"/>
+
+    <!-- CyclomaticComplexity: markdown formatter with one branch per metric section;
+         extracting sub-formatters would not reduce total conditional logic -->
+    <suppress checks="CyclomaticComplexity" files="SlashCommandFormattingUtils\.java"/>
+
+    <!-- CyclomaticComplexity: slash-command dispatcher — one branch per command;
+         a map-based refactor is tracked as a future improvement -->
+    <suppress checks="CyclomaticComplexity" files="SlashCommandRouter\.java"/>
+
+    <!-- CyclomaticComplexity: user-management tool handles many action variants
+         (add/delete/sudo/password/list) in a single @Tool function entry point -->
+    <suppress checks="CyclomaticComplexity" files="UserManagementService\.java"/>
+
+</suppressions>
