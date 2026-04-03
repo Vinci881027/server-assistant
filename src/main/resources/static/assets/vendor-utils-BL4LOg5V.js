@@ -1,5 +1,5 @@
 import { t as __export } from "./rolldown-runtime-Cj0C9Eap.js";
-import { a as regex_default$1, c as parse_default, d as decode_default, i as uc_exports, l as format, n as punycode_es6_default, o as regex_default, r as linkify_it_default, s as mdurl_exports, u as encode_default } from "./vendor-DQFcYRvF.js";
+import { a as regex_default$1, c as parse_default, d as decode_default, i as uc_exports, l as format, n as punycode_es6_default, o as regex_default, r as linkify_it_default, s as mdurl_exports, u as encode_default } from "./vendor-DeHrAwbL.js";
 
 //#region node_modules/axios/lib/helpers/bind.js
 /**
@@ -5862,7 +5862,9 @@ function linkify(state, silent) {
 	if (!link$1) return false;
 	let url = link$1.url;
 	if (url.length <= proto.length) return false;
-	url = url.replace(/\*+$/, "");
+	let urlEnd = url.length;
+	while (urlEnd > 0 && url.charCodeAt(urlEnd - 1) === 42) urlEnd--;
+	if (urlEnd !== url.length) url = url.slice(0, urlEnd);
 	const fullUrl = state.md.normalizeLink(url);
 	if (!state.md.validateLink(fullUrl)) return false;
 	if (!silent) {

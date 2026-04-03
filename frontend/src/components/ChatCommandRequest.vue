@@ -659,7 +659,7 @@ function resendCommand() {
   font-size: 11px;
   font-family: ui-monospace, monospace;
   color: var(--text-secondary);
-  white-space: nowrap;
+  white-space: pre;
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
@@ -724,6 +724,7 @@ function resendCommand() {
 .cmd-inline-command {
   font-family: ui-monospace, monospace;
   font-size: 11px;
+  white-space: pre-wrap;
   color: var(--accent-primary);
   background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
   padding: 1px 6px;

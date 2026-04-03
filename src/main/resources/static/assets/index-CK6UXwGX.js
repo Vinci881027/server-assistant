@@ -1,7 +1,7 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/AdminDashboard-CpxNEyki.js","assets/vendor-DQFcYRvF.js","assets/rolldown-runtime-Cj0C9Eap.js","assets/vendor-vue-DuDrcgjQ.js","assets/vendor-utils-MwEYep9l.js","assets/AdminDashboard-BiQhSPFo.css"])))=>i.map(i=>d[i]);
-import { A as renderSlot, B as toDisplayString, C as mergeModels, D as onUnmounted, E as onMounted, F as withDirectives, I as ref, L as unref, M as useModel, N as watch, O as openBlock, P as withCtx, R as normalizeClass, S as defineAsyncComponent, T as onBeforeUnmount, _ as createCommentVNode, a as Transition, b as createTextVNode, d as withKeys, f as withModifiers, g as createBlock, h as createBaseVNode, i as storeToRefs, j as resolveDynamicComponent, k as renderList, l as vModelDynamic, m as computed, n as createPinia, o as TransitionGroup, p as Fragment, r as defineStore, s as createApp, t as useVirtualizer, u as vModelText, v as createElementBlock, w as nextTick, x as createVNode, y as createStaticVNode, z as normalizeStyle } from "./vendor-vue-DuDrcgjQ.js";
-import { n as axios_default, t as lib_default } from "./vendor-utils-MwEYep9l.js";
-import { t as purify } from "./vendor-DQFcYRvF.js";
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/AdminDashboard-hv3RhDNI.js","assets/vendor-DeHrAwbL.js","assets/rolldown-runtime-Cj0C9Eap.js","assets/vendor-vue-DmD1CsEX.js","assets/vendor-utils-BL4LOg5V.js","assets/AdminDashboard-BiQhSPFo.css"])))=>i.map(i=>d[i]);
+import { A as renderSlot, B as toDisplayString, C as mergeModels, D as onUnmounted, E as onMounted, F as withDirectives, I as ref, L as unref, M as useModel, N as watch, O as openBlock, P as withCtx, R as normalizeClass, S as defineAsyncComponent, T as onBeforeUnmount, _ as createCommentVNode, a as Transition, b as createTextVNode, d as withKeys, f as withModifiers, g as createBlock, h as createBaseVNode, i as storeToRefs, j as resolveDynamicComponent, k as renderList, l as vModelDynamic, m as computed, n as createPinia, o as TransitionGroup, p as Fragment, r as defineStore, s as createApp, t as useVirtualizer, u as vModelText, v as createElementBlock, w as nextTick, x as createVNode, y as createStaticVNode, z as normalizeStyle } from "./vendor-vue-DmD1CsEX.js";
+import { n as axios_default, t as lib_default } from "./vendor-utils-BL4LOg5V.js";
+import { t as purify } from "./vendor-DeHrAwbL.js";
 
 //#region \0vite/modulepreload-polyfill.js
 (function polyfill() {
@@ -1811,7 +1811,7 @@ var _sfc_main$5 = {
 		const isCancelled = computed(() => props.status === "cancelled");
 		const isExpired = computed(() => props.status === "expired" || isPending.value && remainingSeconds.value <= 0);
 		const isResolved = computed(() => isConfirmed.value || isFailed.value || isCancelled.value || isExpired.value);
-		const collapsed = ref(props.status === "confirmed" || props.status === "failed" || props.status === "cancelled");
+		const collapsed = ref(props.status === "confirmed" || props.status === "failed" || props.status === "cancelled" || isInitiallyExpired(props));
 		const summaryRef = ref(null);
 		const resolvedAtLabel = ref(null);
 		const resolvedAtIsCreatedFallback = ref(false);
@@ -2255,7 +2255,7 @@ var _sfc_main$5 = {
 		};
 	}
 };
-var ChatCommandRequest_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$5, [["__scopeId", "data-v-6c8b149c"]]);
+var ChatCommandRequest_default = /* @__PURE__ */ __plugin_vue_export_helper_default(_sfc_main$5, [["__scopeId", "data-v-73b5ac52"]]);
 
 //#endregion
 //#region src/components/MessageItem.vue
@@ -2605,7 +2605,8 @@ var _sfc_main$4 = {
 						"stroke-linejoin": "round"
 					}, [createBaseVNode("path", { d: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" })], -1), createTextVNode(" 切換模型 ", -1)])])) : createCommentVNode("", true)], 64))])) : createCommentVNode("", true)
 				], 36),
-				createBaseVNode("button", {
+				!__props.isTouchDevice ? (openBlock(), createElementBlock("button", {
+					key: 0,
 					onClick: _cache[16] || (_cache[16] = ($event) => emit("copy", msg.value.content, $event)),
 					class: "mt-2 p-1.5 rounded-lg transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100",
 					style: { "color": "var(--text-tertiary)" },
@@ -2622,7 +2623,7 @@ var _sfc_main$4 = {
 					"stroke-linejoin": "round",
 					"stroke-width": "2",
 					d: "M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-				})], -1)])])
+				})], -1)])])) : createCommentVNode("", true)
 			], 10, _hoisted_1$4);
 		};
 	}
@@ -3874,6 +3875,10 @@ var _sfc_main$2 = {
 			await nextTick();
 			handleComposerSend();
 		};
+		const handleCommandAction = (msg, action) => {
+			if (action === "resend" && msg?.command?.content) emit("update:userInput", msg.command.content);
+			emit("command-action", msg, action);
+		};
 		const fillExamplePrompt = (prompt) => {
 			if (!prompt || quickStartDisabled.value) return;
 			emit("update:userInput", prompt);
@@ -3909,7 +3914,7 @@ var _sfc_main$2 = {
 		const typingIndicatorText = computed(() => {
 			if (props.toolCallStatus) return props.toolCallStatus;
 			if (thinkingElapsedSec.value >= THINKING_STATUS_ESCALATION_SEC) return "AI 仍在思考，請稍候...";
-			return "AI 正在思考中...";
+			return "AI 正在處理中...";
 		});
 		const showRetryBanner = computed(() => props.isRetrying && Boolean(props.statusMessage));
 		const retryProgressPercent = computed(() => {
@@ -4216,15 +4221,15 @@ var _sfc_main$2 = {
 					class: "message-list-container flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar",
 					role: "log",
 					"aria-label": "對話訊息"
-				}, [showHistorySkeleton.value ? (openBlock(), createElementBlock("div", _hoisted_1$2, [..._cache[10] || (_cache[10] = [createStaticVNode("<div class=\"inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium animate-pulse\" style=\"background-color:var(--bg-secondary);color:var(--text-tertiary);border:1px solid var(--border-primary);\"><span>載入對話紀錄中...</span></div><div class=\"flex gap-3 items-start\"><div class=\"flex-shrink-0 w-9 h-9 rounded-xl animate-pulse\" style=\"background:color-mix(in srgb, var(--accent-primary) 25%, var(--bg-secondary));\"></div><div class=\"flex-1 max-w-[80%] rounded-2xl p-4 border animate-pulse\" style=\"background-color:var(--ai-bubble);border-color:var(--border-primary);\"><div class=\"h-3.5 w-24 rounded mb-3\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 20%, transparent);\"></div><div class=\"h-3.5 w-full rounded mb-2\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div><div class=\"h-3.5 w-5/6 rounded\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div></div></div><div class=\"flex gap-3 items-start flex-row-reverse\"><div class=\"flex-shrink-0 w-9 h-9 rounded-xl animate-pulse\" style=\"background:color-mix(in srgb, var(--accent-primary) 20%, var(--bg-secondary));\"></div><div class=\"flex-1 max-w-[72%] rounded-2xl p-4 border animate-pulse\" style=\"background-color:var(--user-bubble);border-color:var(--border-primary);\"><div class=\"h-3.5 w-20 rounded mb-3\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 20%, transparent);\"></div><div class=\"h-3.5 w-full rounded\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div></div></div>", 3)])])) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+				}, [showHistorySkeleton.value ? (openBlock(), createElementBlock("div", _hoisted_1$2, [..._cache[9] || (_cache[9] = [createStaticVNode("<div class=\"inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium animate-pulse\" style=\"background-color:var(--bg-secondary);color:var(--text-tertiary);border:1px solid var(--border-primary);\"><span>載入對話紀錄中...</span></div><div class=\"flex gap-3 items-start\"><div class=\"flex-shrink-0 w-9 h-9 rounded-xl animate-pulse\" style=\"background:color-mix(in srgb, var(--accent-primary) 25%, var(--bg-secondary));\"></div><div class=\"flex-1 max-w-[80%] rounded-2xl p-4 border animate-pulse\" style=\"background-color:var(--ai-bubble);border-color:var(--border-primary);\"><div class=\"h-3.5 w-24 rounded mb-3\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 20%, transparent);\"></div><div class=\"h-3.5 w-full rounded mb-2\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div><div class=\"h-3.5 w-5/6 rounded\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div></div></div><div class=\"flex gap-3 items-start flex-row-reverse\"><div class=\"flex-shrink-0 w-9 h-9 rounded-xl animate-pulse\" style=\"background:color-mix(in srgb, var(--accent-primary) 20%, var(--bg-secondary));\"></div><div class=\"flex-1 max-w-[72%] rounded-2xl p-4 border animate-pulse\" style=\"background-color:var(--user-bubble);border-color:var(--border-primary);\"><div class=\"h-3.5 w-20 rounded mb-3\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 20%, transparent);\"></div><div class=\"h-3.5 w-full rounded\" style=\"background-color:color-mix(in srgb, var(--text-tertiary) 16%, transparent);\"></div></div></div>", 3)])])) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
 					showHistoryLoadFailed.value ? (openBlock(), createElementBlock("div", _hoisted_2$2, [
-						(openBlock(), createElementBlock("svg", _hoisted_3$2, [..._cache[11] || (_cache[11] = [createBaseVNode("path", {
+						(openBlock(), createElementBlock("svg", _hoisted_3$2, [..._cache[10] || (_cache[10] = [createBaseVNode("path", {
 							"stroke-linecap": "round",
 							"stroke-linejoin": "round",
 							"stroke-width": "1.5",
 							d: "M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 						}, null, -1)])])),
-						_cache[13] || (_cache[13] = createBaseVNode("p", {
+						_cache[12] || (_cache[12] = createBaseVNode("p", {
 							class: "text-sm",
 							style: { "color": "var(--text-secondary)" }
 						}, "載入對話失敗", -1)),
@@ -4236,7 +4241,7 @@ var _sfc_main$2 = {
 								"color": "var(--bg-primary)"
 							},
 							onClick: _cache[0] || (_cache[0] = ($event) => emit("retry-history"))
-						}, [..._cache[12] || (_cache[12] = [createBaseVNode("svg", {
+						}, [..._cache[11] || (_cache[11] = [createBaseVNode("svg", {
 							xmlns: "http://www.w3.org/2000/svg",
 							class: "h-4 w-4",
 							fill: "none",
@@ -4250,9 +4255,9 @@ var _sfc_main$2 = {
 						})], -1), createTextVNode(" 重試 ", -1)])])
 					])) : createCommentVNode("", true),
 					showWelcomeCard.value ? (openBlock(), createElementBlock("section", _hoisted_4$2, [
-						_cache[15] || (_cache[15] = createBaseVNode("div", { class: "welcome-badge" }, "歡迎使用 Server Assistant", -1)),
-						_cache[16] || (_cache[16] = createBaseVNode("h2", { class: "welcome-title" }, "先試試常用斜線指令", -1)),
-						_cache[17] || (_cache[17] = createBaseVNode("p", { class: "welcome-description" }, " 系統會直接由後端執行這些查詢，不經 AI 推理，回應更快也更穩定。 ", -1)),
+						_cache[14] || (_cache[14] = createBaseVNode("div", { class: "welcome-badge" }, "歡迎使用 Server Assistant", -1)),
+						_cache[15] || (_cache[15] = createBaseVNode("h2", { class: "welcome-title" }, "先試試常用斜線指令", -1)),
+						_cache[16] || (_cache[16] = createBaseVNode("p", { class: "welcome-description" }, " 系統會直接由後端執行這些查詢，不經 AI 推理，回應更快也更穩定。 ", -1)),
 						createBaseVNode("div", _hoisted_5$1, [(openBlock(true), createElementBlock(Fragment, null, renderList(unref(QUICK_START_COMMANDS), (item) => {
 							return openBlock(), createElementBlock("button", {
 								key: item.cmd,
@@ -4262,7 +4267,7 @@ var _sfc_main$2 = {
 								onClick: ($event) => runQuickStartCommand(item.cmd)
 							}, [createBaseVNode("div", _hoisted_7, [createBaseVNode("code", null, toDisplayString(item.cmd), 1), createBaseVNode("span", null, toDisplayString(item.label), 1)]), createBaseVNode("p", null, toDisplayString(item.desc), 1)], 8, _hoisted_6);
 						}), 128))]),
-						createBaseVNode("div", _hoisted_8, [createBaseVNode("div", { class: "welcome-examples-header" }, [_cache[14] || (_cache[14] = createBaseVNode("p", { class: "welcome-examples-label" }, "或試試自然語言提問：", -1)), createBaseVNode("button", {
+						createBaseVNode("div", _hoisted_8, [createBaseVNode("div", { class: "welcome-examples-header" }, [_cache[13] || (_cache[13] = createBaseVNode("p", { class: "welcome-examples-label" }, "或試試自然語言提問：", -1)), createBaseVNode("button", {
 							type: "button",
 							class: "welcome-examples-refresh",
 							onClick: refreshExamples,
@@ -4276,7 +4281,7 @@ var _sfc_main$2 = {
 								onClick: ($event) => fillExamplePrompt(ex)
 							}, toDisplayString(ex), 9, _hoisted_10);
 						}), 128))])]),
-						_cache[18] || (_cache[18] = createBaseVNode("p", { class: "welcome-tip" }, [
+						_cache[17] || (_cache[17] = createBaseVNode("p", { class: "welcome-tip" }, [
 							createTextVNode(" 也可以直接輸入自然語言，或使用 "),
 							createBaseVNode("code", null, "!<Linux 指令>"),
 							createTextVNode("（例如 "),
@@ -4327,9 +4332,9 @@ var _sfc_main$2 = {
 							"rendered-html": unref(renderMarkdown)(visibleMessagesWithKeys.value[virtualRow.index].msg.content),
 							"should-collapse": shouldCollapseMessage(visibleMessagesWithKeys.value[virtualRow.index].msg),
 							"available-models": __props.availableModels,
-							onCommandAction: _cache[1] || (_cache[1] = (msg, action) => emit("command-action", msg, action)),
-							onEditMessage: _cache[2] || (_cache[2] = (idx) => emit("edit-message", idx)),
-							onRegenerateMessage: _cache[3] || (_cache[3] = (idx) => emit("regenerate-message", idx)),
+							onCommandAction: handleCommandAction,
+							onEditMessage: _cache[1] || (_cache[1] = (idx) => emit("edit-message", idx)),
+							onRegenerateMessage: _cache[2] || (_cache[2] = (idx) => emit("regenerate-message", idx)),
 							onToggleExpand: toggleExpand,
 							onSwitchModel: handleSwitchModel,
 							onTouchStart: handleMessageTouchStart,
@@ -4347,7 +4352,7 @@ var _sfc_main$2 = {
 							"available-models"
 						])], 12, _hoisted_14);
 					}), 128))], 4)) : createCommentVNode("", true),
-					showTypingIndicator.value ? (openBlock(), createElementBlock("div", _hoisted_15, [_cache[20] || (_cache[20] = createBaseVNode("div", { class: "flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center overflow-hidden select-none shadow-sm" }, [createBaseVNode("span", { class: "text-xs font-bold text-white" }, "AI")], -1)), createBaseVNode("div", _hoisted_16, [_cache[19] || (_cache[19] = createBaseVNode("div", { class: "flex items-center gap-1.5" }, [
+					showTypingIndicator.value ? (openBlock(), createElementBlock("div", _hoisted_15, [_cache[19] || (_cache[19] = createBaseVNode("div", { class: "flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center overflow-hidden select-none shadow-sm" }, [createBaseVNode("span", { class: "text-xs font-bold text-white" }, "AI")], -1)), createBaseVNode("div", _hoisted_16, [_cache[18] || (_cache[18] = createBaseVNode("div", { class: "flex items-center gap-1.5" }, [
 						createBaseVNode("div", {
 							class: "w-2 h-2 rounded-full animate-bounce",
 							style: { "background-color": "var(--text-tertiary)" }
@@ -4372,7 +4377,7 @@ var _sfc_main$2 = {
 						role: "dialog",
 						"aria-modal": "true",
 						"aria-label": "訊息操作選單",
-						onClick: _cache[4] || (_cache[4] = withModifiers(() => {}, ["stop"]))
+						onClick: _cache[3] || (_cache[3] = withModifiers(() => {}, ["stop"]))
 					}, [
 						createBaseVNode("button", {
 							type: "button",
@@ -4410,12 +4415,12 @@ var _sfc_main$2 = {
 						key: 0,
 						type: "button",
 						class: "retry-now-btn",
-						onClick: _cache[5] || (_cache[5] = (...args) => __props.onRetry && __props.onRetry(...args))
+						onClick: _cache[4] || (_cache[4] = (...args) => __props.onRetry && __props.onRetry(...args))
 					}, "立即重試")) : createCommentVNode("", true), __props.onCancelRetry ? (openBlock(), createElementBlock("button", {
 						key: 1,
 						type: "button",
 						class: "retry-cancel-btn",
-						onClick: _cache[6] || (_cache[6] = (...args) => __props.onCancelRetry && __props.onCancelRetry(...args))
+						onClick: _cache[5] || (_cache[5] = (...args) => __props.onCancelRetry && __props.onCancelRetry(...args))
 					}, "取消")) : createCommentVNode("", true)])])) : createCommentVNode("", true)]),
 					_: 1
 				}),
@@ -4427,7 +4432,7 @@ var _sfc_main$2 = {
 						class: "jump-to-bottom-btn",
 						title: "返回最新訊息",
 						"aria-label": "返回最新訊息"
-					}, [..._cache[21] || (_cache[21] = [createBaseVNode("svg", {
+					}, [..._cache[20] || (_cache[20] = [createBaseVNode("svg", {
 						xmlns: "http://www.w3.org/2000/svg",
 						width: "16",
 						height: "16",
@@ -4442,17 +4447,17 @@ var _sfc_main$2 = {
 				}),
 				createBaseVNode("footer", _hoisted_22, [createVNode(ControlPanel_default, {
 					model: __props.model,
-					"onUpdate:model": _cache[7] || (_cache[7] = (val) => emit("update:model", val)),
+					"onUpdate:model": _cache[6] || (_cache[6] = (val) => emit("update:model", val)),
 					availableModels: __props.availableModels,
 					isAdmin: __props.isAdmin,
 					isOnline: __props.isOnline,
 					userInput: __props.userInput,
-					"onUpdate:userInput": _cache[8] || (_cache[8] = (val) => emit("update:userInput", val)),
+					"onUpdate:userInput": _cache[7] || (_cache[7] = (val) => emit("update:userInput", val)),
 					isProcessing: __props.isProcessing,
 					statusMessage: __props.isRetrying ? "" : __props.statusMessage,
 					onComposerResize: handleComposerResize,
 					onSend: handleComposerSend,
-					onStop: _cache[9] || (_cache[9] = ($event) => emit("stop"))
+					onStop: _cache[8] || (_cache[8] = ($event) => emit("stop"))
 				}, null, 8, [
 					"model",
 					"availableModels",
@@ -4461,7 +4466,7 @@ var _sfc_main$2 = {
 					"userInput",
 					"isProcessing",
 					"statusMessage"
-				]), _cache[22] || (_cache[22] = createBaseVNode("p", {
+				]), _cache[21] || (_cache[21] = createBaseVNode("p", {
 					class: "text-[10px] text-center mt-3",
 					style: { "color": "var(--text-tertiary)" }
 				}, "Groq x Spring AI", -1))])
@@ -4909,6 +4914,11 @@ var BG_JOB_MARKER_REGEX = /\[BG_JOB:::(.*?):::\]/;
 var RATE_LIMIT_MARKER_REGEX = /\[RATE_LIMIT:::(\d+):::(?:(\d+):::)?\]/;
 var CANCELLED_COMMAND_TEXT_REGEX = /^❌\s*已取消指令[：:]\s*([\s\S]+?)\s*$/;
 var CONFIRMED_COMMAND_TEXT_REGEX = /^✅\s*已執行指令[：:]\s*([\s\S]+?)\s*$/;
+var INTERNAL_CONFIRMATION_COPY_PROMPT_PREFIX = "請原樣輸出以下這一行給使用者（不可增刪任何字元）：";
+function stripInternalConfirmationCopyPrompt(content) {
+	if (typeof content !== "string" || !content) return "";
+	return content.replace(INTERNAL_CONFIRMATION_COPY_PROMPT_PREFIX, "").replace(/^\s*\n/, "");
+}
 function parseTimestampToMs(value) {
 	if (typeof value === "number" && Number.isFinite(value)) return value;
 	if (typeof value !== "string") return null;
@@ -4929,7 +4939,7 @@ function extractCommandMarker(content) {
 	if (!match) return null;
 	return {
 		command: (match[1] || "").trim(),
-		cleanedContent: content.replace(COMMAND_MARKER_REGEX, "")
+		cleanedContent: stripInternalConfirmationCopyPrompt(content.replace(COMMAND_MARKER_REGEX, ""))
 	};
 }
 function extractResolvedCommandText(content) {
@@ -5828,13 +5838,13 @@ function useChat() {
 						}
 						continue;
 					}
-					if (line.startsWith("data:")) eventDataLines.push(line.slice(5).replace(/^ /, ""));
+					if (line.startsWith("data:")) eventDataLines.push(line.slice(5));
 				}
 			}
 			if (isAborted) throw new DOMException("Aborted", "AbortError");
 			if (buffer) {
 				const line = buffer.replace(/\r$/, "");
-				if (line.startsWith("data:")) eventDataLines.push(line.slice(5).replace(/^ /, ""));
+				if (line.startsWith("data:")) eventDataLines.push(line.slice(5));
 				else if (line === "" && eventDataLines.length > 0) {
 					processEventData(eventDataLines.join("\n"), aiMsgObj);
 					eventDataLines = [];
@@ -5979,7 +5989,10 @@ function useChat() {
 		const draftBeforeSend = useDraftInput ? userInput.value : "";
 		const msg = typeof content === "string" && content ? content : userInput.value.trim();
 		if (!msg || isProcessing.value) return;
-		if (msg.length > MAX_MESSAGE_LENGTH) return;
+		if (msg.length > MAX_MESSAGE_LENGTH) {
+			statusMessage.value = `訊息過長，請縮短後再傳送（上限 ${MAX_MESSAGE_LENGTH} 字元）`;
+			return;
+		}
 		const exclamationCommand = extractExclamationCommand(msg);
 		if (exclamationCommand !== null) {
 			if (!exclamationCommand) {
@@ -6972,7 +6985,7 @@ var _hoisted_4 = {
 var _sfc_main = {
 	__name: "App",
 	setup(__props) {
-		const AdminDashboard = defineAsyncComponent(() => __vitePreload(() => import("./AdminDashboard-CpxNEyki.js"), __vite__mapDeps([0,1,2,3,4,5])));
+		const AdminDashboard = defineAsyncComponent(() => __vitePreload(() => import("./AdminDashboard-hv3RhDNI.js"), __vite__mapDeps([0,1,2,3,4,5])));
 		const authStore = useAuthStore();
 		const chatStore = useChatStore();
 		const conversationStore = useConversationStore();

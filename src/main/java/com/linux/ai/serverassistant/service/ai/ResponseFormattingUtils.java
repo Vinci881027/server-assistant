@@ -98,7 +98,7 @@ public final class ResponseFormattingUtils {
         boolean longOutput = trimmed.length() > 600 || lineCount > 12;
         boolean hasAlignedColumns = trimmed.lines().anyMatch(ResponseFormattingUtils::looksLikeAlignedTerminalRow);
 
-        if (!(multiLine && (longOutput || hasAlignedColumns))) {
+        if (!hasAlignedColumns && !(multiLine && longOutput)) {
             return trimmed;
         }
 

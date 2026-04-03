@@ -2742,7 +2742,7 @@ var _createHooksMap = function _createHooksMap$1() {
 function createDOMPurify() {
 	let window$1 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
 	const DOMPurify = (root) => createDOMPurify(root);
-	DOMPurify.version = "3.3.1";
+	DOMPurify.version = "3.3.3";
 	DOMPurify.removed = [];
 	if (!window$1 || !window$1.document || window$1.document.nodeType !== NODE_TYPE.document || !window$1.Element) {
 		DOMPurify.isSupported = false;
@@ -2983,7 +2983,7 @@ function createDOMPurify() {
 		if (RETURN_DOM_FRAGMENT) RETURN_DOM = true;
 		if (USE_PROFILES) {
 			ALLOWED_TAGS = addToSet({}, text);
-			ALLOWED_ATTR = [];
+			ALLOWED_ATTR = create(null);
 			if (USE_PROFILES.html === true) {
 				addToSet(ALLOWED_TAGS, html$1);
 				addToSet(ALLOWED_ATTR, html);
@@ -3004,6 +3004,8 @@ function createDOMPurify() {
 				addToSet(ALLOWED_ATTR, xml);
 			}
 		}
+		if (!objectHasOwnProperty(cfg, "ADD_TAGS")) EXTRA_ELEMENT_HANDLING.tagCheck = null;
+		if (!objectHasOwnProperty(cfg, "ADD_ATTR")) EXTRA_ELEMENT_HANDLING.attributeCheck = null;
 		if (cfg.ADD_TAGS) if (typeof cfg.ADD_TAGS === "function") EXTRA_ELEMENT_HANDLING.tagCheck = cfg.ADD_TAGS;
 		else {
 			if (ALLOWED_TAGS === DEFAULT_ALLOWED_TAGS) ALLOWED_TAGS = clone(ALLOWED_TAGS);
@@ -3272,6 +3274,7 @@ function createDOMPurify() {
 	* @return Returns true if `value` is valid, otherwise false.
 	*/
 	const _isValidAttribute = function _isValidAttribute$1(lcTag, lcName, value) {
+		if (FORBID_ATTR[lcName]) return false;
 		if (SANITIZE_DOM && (lcName === "id" || lcName === "name") && (value in document || value in formElement)) return false;
 		if (ALLOW_DATA_ATTR && !FORBID_ATTR[lcName] && regExpTest(DATA_ATTR$1, lcName));
 		else if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName));
@@ -3333,7 +3336,7 @@ function createDOMPurify() {
 				_removeAttribute(name, currentNode);
 				value = SANITIZE_NAMED_PROPS_PREFIX + value;
 			}
-			if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|title|textarea)/i, value)) {
+			if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value)) {
 				_removeAttribute(name, currentNode);
 				continue;
 			}

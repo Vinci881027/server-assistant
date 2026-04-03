@@ -46,7 +46,7 @@ describe('useChat', () => {
   it('sends user input and appends streamed AI response', async () => {
     const streamSpy = vi
       .spyOn(chatApi, 'streamChat')
-      .mockResolvedValue(new Response('data: 測試回覆\n\n', {
+      .mockResolvedValue(new Response('data:測試回覆\n\n', {
         status: 200,
         headers: { 'Content-Type': 'text/event-stream' },
       }))
@@ -75,7 +75,7 @@ describe('useChat', () => {
     vi.spyOn(chatApi, 'createConversation').mockResolvedValue({ data: 'conv-new' })
     const streamSpy = vi
       .spyOn(chatApi, 'streamChat')
-      .mockResolvedValue(new Response('data: 已建立新對話\n\n', {
+      .mockResolvedValue(new Response('data:已建立新對話\n\n', {
         status: 200,
         headers: { 'Content-Type': 'text/event-stream' },
       }))
@@ -111,7 +111,7 @@ describe('useChat', () => {
           status: 429,
           headers: { 'Retry-After': '1' },
         }))
-        .mockResolvedValueOnce(new Response('data: 重試成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:重試成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -163,7 +163,7 @@ describe('useChat', () => {
       const streamSpy = vi
         .spyOn(chatApi, 'streamChat')
         .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-        .mockResolvedValueOnce(new Response('data: 網路恢復後成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:網路恢復後成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -219,7 +219,7 @@ describe('useChat', () => {
             'Retry-After': '2',
           },
         }))
-        .mockResolvedValueOnce(new Response('data: 重試成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:重試成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -267,7 +267,7 @@ describe('useChat', () => {
             'Retry-After': '2',
           },
         }))
-        .mockResolvedValueOnce(new Response('data: 重試成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:重試成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -315,7 +315,7 @@ describe('useChat', () => {
           status: 429,
           headers: { 'Content-Type': 'application/json' },
         }))
-        .mockResolvedValueOnce(new Response('data: details 重試成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:details 重試成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -361,7 +361,7 @@ describe('useChat', () => {
             },
           },
         }))
-        .mockResolvedValueOnce(new Response('data: axios details 重試成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:axios details 重試成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -401,7 +401,7 @@ describe('useChat', () => {
           status: 429,
           headers: { 'retry-after': '1' },
         }))
-        .mockResolvedValueOnce(new Response('data: 錯誤物件重試成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:錯誤物件重試成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -451,11 +451,11 @@ describe('useChat', () => {
       vi.spyOn(Math, 'random').mockReturnValue(0)
       const streamSpy = vi
         .spyOn(chatApi, 'streamChat')
-        .mockResolvedValueOnce(new Response('data: [RATE_LIMIT:::2:::]\n\n', {
+        .mockResolvedValueOnce(new Response('data:[RATE_LIMIT:::2:::]\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
-        .mockResolvedValueOnce(new Response('data: 標記重試成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:標記重試成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -507,11 +507,11 @@ describe('useChat', () => {
       vi.spyOn(Math, 'random').mockReturnValue(0)
       const streamSpy = vi
         .spyOn(chatApi, 'streamChat')
-        .mockResolvedValueOnce(new Response('data: [RATE_LIMIT:::2:::0:::]\n\n', {
+        .mockResolvedValueOnce(new Response('data:[RATE_LIMIT:::2:::0:::]\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
-        .mockResolvedValueOnce(new Response('data: key 恢復後重試成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:key 恢復後重試成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -565,7 +565,7 @@ describe('useChat', () => {
           status: 429,
           headers: { 'Retry-After': '1' },
         }))
-        .mockResolvedValueOnce(new Response('data: jitter 重試成功\n\n', {
+        .mockResolvedValueOnce(new Response('data:jitter 重試成功\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
         }))
@@ -707,7 +707,7 @@ describe('useChat', () => {
 
     const openStream = new ReadableStream({
       start(controller) {
-        controller.enqueue(encoder.encode('data: 進行中\n\n'))
+        controller.enqueue(encoder.encode('data:進行中\n\n'))
       },
       cancel() {
         cancelCalled = true

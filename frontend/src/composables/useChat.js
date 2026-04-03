@@ -441,7 +441,7 @@ export function useChat() {
 
           // Accumulate multi-line "data:" fields within the same SSE event.
           if (line.startsWith('data:')) {
-            eventDataLines.push(line.slice(5).replace(/^ /, ''))
+            eventDataLines.push(line.slice(5))
           }
         }
       }
@@ -454,7 +454,7 @@ export function useChat() {
       if (buffer) {
         const line = buffer.replace(/\r$/, '')
         if (line.startsWith('data:')) {
-          eventDataLines.push(line.slice(5).replace(/^ /, ''))
+          eventDataLines.push(line.slice(5))
         } else if (line === '' && eventDataLines.length > 0) {
           processEventData(eventDataLines.join('\n'), aiMsgObj)
           eventDataLines = []

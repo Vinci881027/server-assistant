@@ -15,6 +15,14 @@ const BG_JOB_MARKER_REGEX = /\[BG_JOB:::(.*?):::\]/
 const RATE_LIMIT_MARKER_REGEX = /\[RATE_LIMIT:::(\d+):::(?:(\d+):::)?\]/
 const CANCELLED_COMMAND_TEXT_REGEX = /^❌\s*已取消指令[：:]\s*([\s\S]+?)\s*$/
 const CONFIRMED_COMMAND_TEXT_REGEX = /^✅\s*已執行指令[：:]\s*([\s\S]+?)\s*$/
+const INTERNAL_CONFIRMATION_COPY_PROMPT_PREFIX = '請原樣輸出以下這一行給使用者（不可增刪任何字元）：'
+
+function stripInternalConfirmationCopyPrompt(content) {
+  if (typeof content !== 'string' || !content) return ''
+  return content
+    .replace(INTERNAL_CONFIRMATION_COPY_PROMPT_PREFIX, '')
+    .replace(/^\s*\n/, '')
+}
 
 function parseTimestampToMs(value) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -40,7 +48,7 @@ export function extractCommandMarker(content) {
 
   return {
     command: (match[1] || '').trim(),
-    cleanedContent: content.replace(COMMAND_MARKER_REGEX, ''),
+    cleanedContent: stripInternalConfirmationCopyPrompt(content.replace(COMMAND_MARKER_REGEX, '')),
   }
 }
 

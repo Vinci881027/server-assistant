@@ -31,7 +31,7 @@ Provides conversational operations, deterministic slash commands, `!` direct com
 - Linux host (PAM authentication requires Linux)
 - Java `21+`
 - Maven `3.9+` (enforced by `maven-enforcer-plugin`)
-- Node.js `18+` + npm (frontend build/development)
+- Node.js `^20.19.0` or `>=22.12.0` + npm (frontend build/development)
 - PostgreSQL (default datasource)
 - Groq API key
 
@@ -71,6 +71,8 @@ npm install
 npm run build
 cd ..
 ```
+
+If you see `Unexpected token '??='` while running a frontend command, your Node.js runtime is too old for the installed Vite/Rolldown toolchain. Upgrade Node.js to `20.19.x` LTS or `22.12+`, then reinstall dependencies in `frontend`.
 
 Vite output goes to: `src/main/resources/static`.
 

@@ -1162,8 +1162,7 @@ public class CommandExecutionService {
     }
 
     private String getConfirmationPrompt(String pseudoCommand) {
-        return "請原樣輸出以下這一行給使用者（不可增刪任何字元）：\n"
-                + CommandMarkers.confirmationPrompt(pseudoCommand);
+        return CommandMarkers.confirmationPrompt(pseudoCommand);
     }
 
     private String getCurrentUsername() {

@@ -3,17 +3,21 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint src --ext .js,.vue",
-    "lint:fix": "eslint src --ext .js,.vue --fix",
+    "preinstall": "node ./scripts/check-node.cjs",
+    "dev": "node ./scripts/run-tool.cjs vite",
+    "build": "node ./scripts/run-tool.cjs vite build",
+    "preview": "node ./scripts/run-tool.cjs vite preview",
+    "lint": "node ./scripts/run-tool.cjs eslint src --ext .js,.vue",
+    "lint:fix": "node ./scripts/run-tool.cjs eslint src --ext .js,.vue --fix",
     "test": "npm run test:unit",
-    "test:unit": "vitest run",
-    "test:unit:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test tests/e2e/minimal-chat-flow.spec.js --grep \"login, send message, and load older history\" --workers=1"
+    "test:unit": "node ./scripts/run-tool.cjs vitest run",
+    "test:unit:watch": "node ./scripts/run-tool.cjs vitest",
+    "test:e2e": "node ./scripts/run-tool.cjs playwright test",
+    "test:e2e:smoke": "node ./scripts/run-tool.cjs playwright test tests/e2e/minimal-chat-flow.spec.js --grep \"login, send message, and load older history\" --workers=1"
   },
   "dependencies": {
     "@tanstack/vue-virtual": "^3.13.23",

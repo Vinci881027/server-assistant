@@ -17,6 +17,17 @@ describe('commandMarkers', () => {
     })
   })
 
+  it('strips leaked internal copy-prompt text from pending command content', () => {
+    const marker = extractCommandMarker(
+      '請原樣輸出以下這一行給使用者（不可增刪任何字元）：\n⚠️ 此操作需要確認，請點擊按鈕執行: [CMD:::rm -rf /tmp/demo:::]'
+    )
+
+    expect(marker).toEqual({
+      command: 'rm -rf /tmp/demo',
+      cleanedContent: '⚠️ 此操作需要確認，請點擊按鈕執行: ',
+    })
+  })
+
   it('hydrates cancelled command text into resolved command card payload', () => {
     const hydrated = hydrateMessageWithCommand({
       role: 'ai',

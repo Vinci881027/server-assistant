@@ -5,7 +5,17 @@
       "Bash(wc -l /home/vinci/server-assistant/src/test/java/com/linux/ai/serverassistant/**/*.java)",
       "Bash(wc -l /home/vinci/server-assistant/src/main/java/com/linux/ai/serverassistant/**/*.java)",
       "Bash(npm test:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(find /home/vinci/server-assistant -type f \\\\\\(-name *Kubernetes* -o -name *kubernetes* -o -name *K8s* -o -name *k8s* \\\\\\))",
+      "Bash(sudo chmod:*)",
+      "Bash(npx vite:*)",
+      "Bash(grep -r white-space /home/vinci/server-assistant/frontend/src --include=*.css --include=*.vue --include=*.scss)",
+      "Bash(grep -n \"normalize\\\\|@reset\\\\|@apply\" /home/vinci/server-assistant/frontend/src -r --include=*.css)",
+      "Bash(grep -rn \"fence\\\\|codeBlock\\\\|code_block\" frontend/src --include=*.js)"
+    ],
+    "additionalDirectories": [
+      "/home/vinci/server-assistant/frontend/node_modules/.vite-temp"
     ]
   }
 }

@@ -2,6 +2,10 @@ package com.linux.ai.serverassistant.service.command;
 
 import com.linux.ai.serverassistant.util.CommandMarkers;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +23,7 @@ final class SlashCommandFormattingUtils {
     private static final String SECTION_GPU_UUID = "#GPU_UUID";
     private static final String SECTION_PROCESSES = "#PROCESSES";
     private static final String SECTION_NVIDIA_SMI_PROCESSES = "#NVIDIA_SMI_PROCESSES";
+    private static final DateTimeFormatter LOCAL_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private SlashCommandFormattingUtils() {}
 
@@ -28,7 +33,7 @@ final class SlashCommandFormattingUtils {
         sb.append("| 項目 | 值 |\n");
         sb.append("| --- | --- |\n");
 
-        appendRow(sb, "掃描時間", overview != null ? overview.get("timestamp") : null);
+        appendRow(sb, "掃描時間", formatOverviewTimestamp(overview != null ? overview.get("timestamp") : null));
         Object warning = overview != null ? overview.get(warningKey) : null;
         if (warning != null && !String.valueOf(warning).isBlank()) {
             appendRow(sb, "警告", warning);
@@ -417,6 +422,24 @@ final class SlashCommandFormattingUtils {
         if (p == null && t == null) return null;
         if (p != null && t != null) return String.valueOf(p) + " / " + String.valueOf(t);
         return (p != null) ? String.valueOf(p) : String.valueOf(t);
+    }
+
+    private static String formatOverviewTimestamp(Object value) {
+        if (value == null) return null;
+        if (value instanceof Instant instant) {
+            return LOCAL_TIMESTAMP_FORMATTER.format(instant.atZone(ZoneId.systemDefault()));
+        }
+        if (value instanceof CharSequence textValue) {
+            String raw = textValue.toString().trim();
+            if (raw.isEmpty()) return raw;
+            try {
+                Instant instant = Instant.parse(raw);
+                return LOCAL_TIMESTAMP_FORMATTER.format(instant.atZone(ZoneId.systemDefault()));
+            } catch (DateTimeParseException ignored) {
+                return raw;
+            }
+        }
+        return String.valueOf(value);
     }
 
     private static void appendRow(StringBuilder sb, String key, Object value) {
